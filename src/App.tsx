@@ -135,12 +135,12 @@ export default function App() {
           "fixed inset-y-0 left-0 z-50 w-64 glass border-r border-white/10 text-white transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 hidden lg:flex flex-col p-6"
         )}
       >
-        <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg glow-blue overflow-hidden">
+        <div className="flex flex-col items-center gap-4 mb-10 text-center">
+          <div className="w-24 h-24 bg-blue-600 rounded-2xl flex items-center justify-center shadow-xl glow-blue overflow-hidden border-2 border-white/10">
             <img 
               src="/logodruppy.png" 
               alt="Logo" 
-              className="w-full h-full object-cover" 
+              className="w-full h-full object-cover scale-110" 
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 const parent = e.currentTarget.parentElement;
@@ -152,7 +152,7 @@ export default function App() {
               }}
             />
           </div>
-          <h1 className="text-xl font-bold tracking-tight">Druppy Barber <span className="text-red-500">Shop</span></h1>
+          <h1 className="text-2xl font-black tracking-tighter leading-none uppercase italic">Druppy Barber <span className="text-red-500 block not-italic">Shop</span></h1>
         </div>
 
         <nav className="flex-1 space-y-1">
@@ -191,13 +191,13 @@ export default function App() {
       </aside>
 
       {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 glass border-b border-white/10 flex items-center justify-between px-5 flex-shrink-0 lg:hidden">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center overflow-hidden">
+      <header className="fixed top-0 left-0 right-0 z-50 h-28 glass border-b border-white/10 flex items-center justify-between px-5 flex-shrink-0 lg:hidden">
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-20 bg-blue-600 rounded-xl flex items-center justify-center shadow-xl glow-blue overflow-hidden border-2 border-white/10">
             <img 
               src="/logodruppy.png" 
               alt="Logo" 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover scale-110"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 const parent = e.currentTarget.parentElement;
@@ -209,7 +209,10 @@ export default function App() {
               }}
             />
           </div>
-          <h1 className="text-lg font-bold tracking-tight">Druppy Barber <span className="text-red-500">Shop</span></h1>
+          <div className="flex flex-col">
+            <h1 className="text-xl font-black tracking-tighter leading-none uppercase italic">Druppy Barber</h1>
+            <span className="text-red-500 font-black text-lg leading-none uppercase">Shop</span>
+          </div>
         </div>
         <button 
           onClick={() => setIsDarkMode(!isDarkMode)}
@@ -246,7 +249,7 @@ export default function App() {
       </nav>
 
       {/* Content Area */}
-      <main className="flex-1 overflow-y-auto pt-16 lg:pt-0 pb-24 lg:pb-0 relative">
+      <main className="flex-1 overflow-y-auto pt-28 lg:pt-0 pb-24 lg:pb-0 relative">
         {/* Background Glows */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full animate-pulse-glow" />
