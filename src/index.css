@@ -10,7 +10,7 @@
   /* Dark Mode - Immersive Deep Theme */
   --bg-deep: #05070a;
   --text-main: #FFFFFF;
-  --text-muted: rgba(255, 255, 255, 0.7);
+  --text-muted: rgba(255, 255, 255, 0.8);
   
   /* Exact Gradients from the image */
   --grad-blue: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
