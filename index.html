@@ -1,22 +1,26 @@
 <!doctype html>
-<html lang="en">
+<html lang="es" prefix="og: http://ogp.me/ns#">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Druppy Barber Shop</title>
-    <meta name="description" content="Sistema de gestión profesional para Druppy Barber Shop. Control de ventas, clientes, barberos y reportes detallados." />
     
-    <!-- Open Graph / Facebook / WhatsApp -->
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Druppy Barber Shop" />
+    <!-- WhatsApp / Facebook / Open Graph -->
     <meta property="og:title" content="Druppy Barber Shop" />
-    <meta property="og:description" content="Sistema de gestión profesional para Druppy Barber Shop. Control de ventas, clientes, barberos y reportes detallados." />
     <meta property="og:image" content="/logodruppy.png" />
     <meta property="og:image:secure_url" content="/logodruppy.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Logo Druppy Barber Shop" />
+    <meta property="og:description" content="Sistema de gestión profesional para Druppy Barber Shop. Control de ventas, clientes, barberos y reportes detallados." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Druppy Barber Shop" />
+    
+    <!-- Fallback para scrapers antiguos -->
+    <link rel="image_src" href="/logodruppy.png" />
+    <meta itemprop="image" content="/logodruppy.png" />
+    
+    <title>Druppy Barber Shop</title>
+    <meta name="description" content="Sistema de gestión profesional para Druppy Barber Shop. Control de ventas, clientes, barberos y reportes detallados." />
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
@@ -29,7 +33,6 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-
 
 
 
