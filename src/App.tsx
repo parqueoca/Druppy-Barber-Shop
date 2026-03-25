@@ -740,7 +740,7 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
                     )}
                   </div>
                   <p className="text-[10px] text-zinc-500 font-medium ml-3.5">
-                    {app.service} | {format(new Date(app.appointment_time), "HH:mm")}
+                    {app.service} | {format(new Date(app.appointment_time), "hh:mm a")}
                   </p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
@@ -1829,7 +1829,7 @@ function SalesView() {
                 <tr key={sale.id} className="hover:bg-white/5 transition-colors group">
                   <td className="px-6 py-4">
                     <p className="text-sm font-bold text-zinc-200">{sale.clients?.name || 'Cliente ocasional'}</p>
-                    <p className="text-[10px] text-zinc-500 font-medium">{format(new Date(sale.created_at), "dd/MM HH:mm")}</p>
+                    <p className="text-[10px] text-zinc-500 font-medium">{format(new Date(sale.created_at), "dd/MM hh:mm a")}</p>
                   </td>
                   <td className="px-6 py-4 text-sm text-zinc-400 font-medium">{sale.barbers?.name || '---'}</td>
                   <td className="px-6 py-4 text-sm text-zinc-400 font-medium">{sale.services}</td>
@@ -1858,7 +1858,7 @@ function SalesView() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-2 transition-opacity">
                       {sale.clients?.phone && (
                         <a 
                           href={getWhatsAppLink(sale.clients.phone)}
@@ -3626,7 +3626,7 @@ function FinanceView() {
                   </div>
                   <div>
                     <p className="text-sm font-bold">{t.type === 'income' ? (t.services || 'Venta') : t.description}</p>
-                    <p className="text-[10px] text-zinc-500">{format(new Date(t.created_at), "dd MMM, HH:mm", { locale: es })}</p>
+                    <p className="text-[10px] text-zinc-500">{format(new Date(t.created_at), "dd MMM, hh:mm a", { locale: es })}</p>
                   </div>
                 </div>
                 <p className={cn(
@@ -3928,10 +3928,10 @@ function ReportsView() {
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(dateStr, 105, 38, { align: 'center' });
-    doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 105, 44, { align: 'center' });
+    doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy hh:mm a')}`, 105, 44, { align: 'center' });
 
     const tableData = filteredSales.map(s => [
-      format(new Date(s.created_at), 'dd/MM/yyyy HH:mm'),
+      format(new Date(s.created_at), 'dd/MM/yyyy hh:mm a'),
       clients.find(c => c.id === s.client_id)?.name || 'Ocasional',
       barbers.find(b => b.id === s.barber_id)?.name || 'N/A',
       s.services || 'N/A',
@@ -3983,7 +3983,7 @@ function ReportsView() {
     
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 105, 38, { align: 'center' });
+    doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy hh:mm a')}`, 105, 38, { align: 'center' });
 
     const tableData = filteredClients.map(c => {
       const clientSales = sales.filter(s => s.client_id === c.id);
