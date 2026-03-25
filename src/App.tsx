@@ -817,7 +817,7 @@ function AppointmentsView({
   async function fetchData() {
     try {
       const [appsRes, barbersRes, clientsRes, servicesRes, methodsRes] = await Promise.all([
-        supabase.from('appointments').select('*, clients(name), barbers(name)').order('created_at', { ascending: false }),
+        supabase.from('appointments').select('*, clients(name, phone), barbers(name)').order('created_at', { ascending: false }),
         supabase.from('barbers').select('*').eq('active', true),
         supabase.from('clients').select('*').order('name'),
         supabase.from('services').select('*').order('name'),
@@ -1222,6 +1222,17 @@ function AppointmentsView({
                       <option value="cancelled" className="text-red-500">Cancelada</option>
                     </select>
                     <div className="flex items-center gap-1">
+                      {app.clients?.phone && (
+                        <a 
+                          href={getWhatsAppLink(app.clients.phone)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                          title="Enviar WhatsApp"
+                        >
+                          <MessageCircle className="w-5 h-5" />
+                        </a>
+                      )}
                       <button 
                         onClick={() => handleEditAppointment(app)}
                         className="p-2 text-zinc-400 hover:text-blue-500 transition-colors"
@@ -1317,7 +1328,7 @@ function SalesView() {
   async function fetchData() {
     try {
       const [salesRes, barbersRes, clientsRes, servicesRes, methodsRes] = await Promise.all([
-        supabase.from('sales').select('*, clients(name), barbers(name)').order('created_at', { ascending: false }),
+        supabase.from('sales').select('*, clients(name, phone), barbers(name)').order('created_at', { ascending: false }),
         supabase.from('barbers').select('*').eq('active', true),
         supabase.from('clients').select('*').order('name'),
         supabase.from('services').select('*').order('name'),
@@ -1786,6 +1797,17 @@ function SalesView() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {sale.clients?.phone && (
+                          <a 
+                            href={getWhatsAppLink(sale.clients.phone)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                            title="Enviar WhatsApp"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                          </a>
+                        )}
                         {!sale.is_paid && sale.payment_method === 'Crédito' && (
                           <button 
                             onClick={() => {
@@ -1898,8 +1920,19 @@ function ClientsView({ onTabChange, onPreselectClient }: { onTabChange: (tab: Ta
   useEffect(() => {
     if (selectedClient) {
       fetchVisitHistory(selectedClient.id);
+    } else {
+      setVisitHistory([]);
     }
   }, [selectedClient]);
+
+  const totalSpent = useMemo(() => {
+    return visitHistory.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
+  }, [visitHistory]);
+
+  const lastVisit = useMemo(() => {
+    if (visitHistory.length === 0) return 'N/A';
+    return format(new Date(visitHistory[0].created_at), "dd MMM yyyy", { locale: es });
+  }, [visitHistory]);
 
   async function fetchVisitHistory(clientId: string) {
     try {
@@ -2109,11 +2142,11 @@ function ClientsView({ onTabChange, onPreselectClient }: { onTabChange: (tab: Ta
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Última Visita</p>
-                      <p className="font-bold text-zinc-200">{selectedClient.lastVisit || 'N/A'}</p>
+                      <p className="font-bold text-zinc-200">{lastVisit}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Total Gastado</p>
-                      <p className="font-black text-emerald-400">{selectedClient.totalSpent || 'RD$ 0'}</p>
+                      <p className="font-black text-emerald-400">RD$ {totalSpent.toLocaleString()}</p>
                     </div>
                   </div>
 
