@@ -132,18 +132,15 @@ export default function App() {
       {/* Desktop Sidebar (Hidden on Mobile) */}
       <aside 
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 hidden lg:flex flex-col p-6",
-          isDarkMode 
-            ? "bg-gradient-to-r from-white via-white via-80% to-transparent border-r border-white/5" 
-            : "bg-gradient-to-r from-white via-white via-85% to-transparent border-r border-zinc-200"
+          "fixed inset-y-0 left-0 z-50 w-64 bg-[#1a1c20] border-r border-white/5 text-white transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 hidden lg:flex flex-col p-6"
         )}
       >
         <div className="flex flex-col items-center gap-4 mb-10 text-center">
-          <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center overflow-hidden border-2 border-zinc-100 shadow-[0_0_20px_rgba(59,130,246,0.15)] glow-blue-subtle">
+          <div className="w-24 h-24 flex items-center justify-center overflow-hidden transition-all duration-300">
             <img 
               src="/logodruppy.png" 
               alt="Logo" 
-              className="w-full h-full object-contain scale-110" 
+              className="w-full h-full object-contain scale-125" 
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 const parent = e.currentTarget.parentElement;
@@ -155,8 +152,8 @@ export default function App() {
               }}
             />
           </div>
-          <h1 className="text-xl font-black tracking-tighter leading-none uppercase italic text-zinc-900">
-            DRUPPY BARBER <span className="text-red-600 not-italic">SHOP</span>
+          <h1 className="text-xl font-black tracking-tighter leading-none uppercase italic text-white">
+            DRUPPY BARBER <span className="text-red-500 not-italic">SHOP</span>
           </h1>
         </div>
 
@@ -168,8 +165,8 @@ export default function App() {
               className={cn(
                 "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative",
                 activeTab === item.id 
-                  ? "bg-blue-600 text-white shadow-lg glow-blue" 
-                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                  ? "bg-red-600 text-white shadow-lg" 
+                  : "text-zinc-500 hover:bg-white/5 hover:text-white"
               )}
             >
               <item.icon className={cn("w-5 h-5", activeTab === item.id ? "text-white" : "group-hover:text-white")} />
@@ -196,16 +193,13 @@ export default function App() {
       </aside>
 
       {/* Mobile Header */}
-      <header className={cn(
-        "fixed top-0 left-0 right-0 z-50 h-32 flex items-center justify-between px-5 flex-shrink-0 lg:hidden transition-all duration-300",
-        "bg-gradient-to-b from-white via-white via-75% to-transparent"
-      )}>
-        <div className="flex items-center gap-4 -mt-4">
-          <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center overflow-hidden border-2 border-zinc-100 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+      <header className="fixed top-0 left-0 right-0 z-50 h-28 bg-[#1a1c20] border-b border-white/5 flex items-center justify-between px-5 flex-shrink-0 lg:hidden shadow-xl">
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-20 flex items-center justify-center overflow-hidden transition-all duration-300">
             <img 
               src="/logodruppy.png" 
               alt="Logo" 
-              className="w-full h-full object-contain scale-110"
+              className="w-full h-full object-contain scale-125"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 const parent = e.currentTarget.parentElement;
@@ -217,20 +211,20 @@ export default function App() {
               }}
             />
           </div>
-          <h1 className="text-lg font-black tracking-tighter leading-none uppercase italic text-zinc-900">
-            DRUPPY BARBER <span className="text-red-600 not-italic">SHOP</span>
+          <h1 className="text-lg font-black tracking-tighter leading-none uppercase italic text-white">
+            DRUPPY BARBER <span className="text-red-500 not-italic">SHOP</span>
           </h1>
         </div>
         <button 
           onClick={() => setIsDarkMode(!isDarkMode)}
-          className="p-2 bg-zinc-100 rounded-full text-zinc-600"
+          className="p-2 bg-white/5 rounded-full text-white hover:bg-white/10 transition-colors"
         >
           {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
       </header>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 h-20 bg-white border-t border-zinc-200 flex items-center justify-around px-2 lg:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 h-20 bg-[#1a1c20] border-t border-white/5 flex items-center justify-around px-2 lg:hidden">
         {navItems.map((item) => (
           <button
             key={item.id}
@@ -240,7 +234,7 @@ export default function App() {
             {activeTab === item.id && (
               <motion.div 
                 layoutId="nav-glow"
-                className="absolute -top-10 w-12 h-1 bg-red-500 blur-[2px] shadow-[0_0_15px_rgba(239,68,68,0.8)]"
+                className="absolute -top-10 w-12 h-1 bg-red-500 blur-[2px]"
               />
             )}
             <item.icon className={cn(
@@ -256,13 +250,7 @@ export default function App() {
       </nav>
 
       {/* Content Area */}
-      <main className="flex-1 overflow-y-auto pt-32 lg:pt-0 pb-24 lg:pb-0 relative">
-        {/* Background Glows */}
-        <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full animate-pulse-glow" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-red-600/10 blur-[120px] rounded-full animate-pulse-glow" />
-        </div>
-
+      <main className="flex-1 overflow-y-auto pt-28 lg:pt-0 pb-24 lg:pb-0 relative">
         <div className="max-w-4xl mx-auto p-5 lg:p-10 relative z-10">
           <AnimatePresence mode="wait">
             <motion.div
@@ -348,6 +336,7 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
   const [todayPayments, setTodayPayments] = useState<any[]>([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
   const [pendingCredits, setPendingCredits] = useState<any[]>([]);
+  const [showPendingCredits, setShowPendingCredits] = useState(true);
   const [todayAppsCount, setTodayAppsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
@@ -440,35 +429,59 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
       {/* Pending Credits Alerts */}
       {pendingCredits.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 px-2">
-            <AlertCircle className="w-4 h-4 text-orange-500" />
-            <span className="text-xs font-bold text-orange-500 uppercase tracking-widest">Recordatorios de Cobro</span>
-          </div>
-          <div className="space-y-2">
-            {pendingCredits.map(credit => {
-              const isToday = isSameDay(new Date(credit.due_date), new Date());
-              return (
-                <div key={credit.id} className="glass p-4 rounded-2xl border-l-4 border-orange-500 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold text-white">Cobro pendiente: {credit.clients?.name || 'Cliente'}</p>
-                    <p className="text-[10px] text-zinc-400 font-medium">
-                      Vence: {format(new Date(credit.due_date), "dd 'de' MMMM", { locale: es })} 
-                      {isToday ? ' (HOY)' : ''}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-black text-orange-500">RD$ {credit.total_amount.toLocaleString()}</p>
-                    <button 
-                      onClick={() => onTabChange('sales')}
-                      className="text-[10px] font-bold text-blue-400 hover:underline"
-                    >
-                      Ver detalles
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <button 
+            onClick={() => setShowPendingCredits(!showPendingCredits)}
+            className="flex items-center justify-between w-full px-2 group"
+          >
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-orange-500" />
+              <span className="text-xs font-bold text-orange-500 uppercase tracking-widest">Recordatorios de Cobro</span>
+              <span className="bg-orange-500/20 text-orange-500 text-[10px] px-2 py-0.5 rounded-full font-black">
+                {pendingCredits.length}
+              </span>
+            </div>
+            <div className={cn(
+              "p-1 rounded-lg bg-white/5 text-zinc-500 group-hover:text-white transition-all",
+              showPendingCredits ? "rotate-90" : "rotate-0"
+            )}>
+              <ChevronRight className="w-4 h-4" />
+            </div>
+          </button>
+
+          <AnimatePresence>
+            {showPendingCredits && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden space-y-2"
+              >
+                {pendingCredits.map(credit => {
+                  const isToday = isSameDay(new Date(credit.due_date), new Date());
+                  return (
+                    <div key={credit.id} className="glass p-4 rounded-2xl border-l-4 border-orange-500 flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-bold text-white">Cobro pendiente: {credit.clients?.name || 'Cliente'}</p>
+                        <p className="text-[10px] text-zinc-400 font-medium">
+                          Vence: {format(new Date(credit.due_date), "dd 'de' MMMM", { locale: es })} 
+                          {isToday ? ' (HOY)' : ''}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-orange-500">RD$ {credit.total_amount.toLocaleString()}</p>
+                        <button 
+                          onClick={() => onTabChange('sales')}
+                          className="text-[10px] font-bold text-blue-400 hover:underline"
+                        >
+                          Ver detalles
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
@@ -476,8 +489,7 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
       <div className="grid grid-cols-2 gap-4">
         <button 
           onClick={() => onTabChange('clients')}
-          className="flex flex-col items-center justify-center gap-2 p-5 rounded-[1.5rem] active:scale-95 transition-all glow-blue"
-          style={{ background: 'var(--grad-blue)' }}
+          className="flex flex-col items-center justify-center gap-2 p-5 rounded-[1.5rem] active:scale-95 transition-all bg-blue-600 shadow-lg"
         >
           <div className="p-2 bg-white/10 rounded-xl">
             <Users className="w-8 h-8 text-white" />
@@ -486,8 +498,7 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
         </button>
         <button 
           onClick={() => onTabChange('appointments')}
-          className="flex flex-col items-center justify-center gap-2 p-5 rounded-[1.5rem] active:scale-95 transition-all glow-green"
-          style={{ background: 'var(--grad-green)' }}
+          className="flex flex-col items-center justify-center gap-2 p-5 rounded-[1.5rem] active:scale-95 transition-all bg-emerald-600 shadow-lg"
         >
           <div className="p-2 bg-white/10 rounded-xl">
             <Calendar className="w-8 h-8 text-white" />
@@ -496,8 +507,7 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
         </button>
         <button 
           onClick={() => onTabChange('sales')}
-          className="flex flex-col items-center justify-center gap-2 p-5 rounded-[1.5rem] active:scale-95 transition-all glow-orange"
-          style={{ background: 'var(--grad-orange)' }}
+          className="flex flex-col items-center justify-center gap-2 p-5 rounded-[1.5rem] active:scale-95 transition-all bg-orange-600 shadow-lg"
         >
           <div className="p-2 bg-white/10 rounded-xl">
             <Receipt className="w-8 h-8 text-white" />
@@ -506,8 +516,7 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
         </button>
         <button 
           onClick={() => onTabChange('finance')}
-          className="flex flex-col items-center justify-center gap-2 p-5 rounded-[1.5rem] active:scale-95 transition-all glow-purple"
-          style={{ background: 'var(--grad-purple)' }}
+          className="flex flex-col items-center justify-center gap-2 p-5 rounded-[1.5rem] active:scale-95 transition-all bg-purple-600 shadow-lg"
         >
           <div className="p-2 bg-white/10 rounded-xl">
             <DollarSign className="w-8 h-8 text-white" />
@@ -516,8 +525,7 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
         </button>
         <button 
           onClick={() => onTabChange('vip')}
-          className="flex flex-col items-center justify-center gap-2 p-5 rounded-[1.5rem] active:scale-95 transition-all glow-yellow col-span-2 mt-2"
-          style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}
+          className="flex flex-col items-center justify-center gap-2 p-5 rounded-[1.5rem] active:scale-95 transition-all bg-yellow-600 shadow-lg col-span-2 mt-2"
         >
           <div className="p-2 bg-white/10 rounded-xl">
             <Trophy className="w-8 h-8 text-white" />
@@ -1037,8 +1045,7 @@ function AppointmentsView({
             </div>
             <button 
               onClick={() => setIsAddingAppointment(true)}
-              className="btn-primary bg-emerald-600 shadow-emerald-500/20"
-              style={{ background: 'var(--grad-green)', boxShadow: '0 0 20px rgba(34, 197, 94, 0.4)' }}
+              className="btn-primary bg-emerald-600 shadow-lg"
             >
               <Plus className="w-5 h-5" />
               Nueva Cita
@@ -1277,7 +1284,7 @@ function AppointmentsView({
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="card p-8 shadow-2xl max-w-sm w-full text-center glow-red"
+            className="card p-8 shadow-2xl max-w-sm w-full text-center"
           >
             <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
               <AlertCircle className="w-10 h-10" />
@@ -1514,8 +1521,7 @@ function SalesView() {
         <h3 className="text-2xl font-black text-white tracking-tight">Registro de Trabajos</h3>
         <button 
           onClick={() => setIsAddingSale(true)}
-          className="btn-primary"
-          style={{ background: 'var(--grad-orange)', boxShadow: 'var(--glow-orange)' }}
+          className="btn-primary bg-orange-600 shadow-lg"
         >
           <Plus className="w-5 h-5" />
           Registrar Venta
@@ -2132,7 +2138,7 @@ function ClientsView({ onTabChange, onPreselectClient }: { onTabChange: (tab: Ta
 
             <div className="card p-8">
               <div className="flex flex-col md:flex-row gap-8 items-start">
-                <div className="w-24 h-24 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-3xl font-black border border-blue-500/30 glow-blue">
+                <div className="w-24 h-24 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-3xl font-black border border-blue-500/30">
                   {selectedClient.name.charAt(0)}
                 </div>
                 <div className="flex-1 space-y-4">
@@ -2469,7 +2475,7 @@ function BarbersView() {
             onClick={() => setShowInactive(!showInactive)}
             className={cn(
               "text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full transition-all border",
-              showInactive ? "bg-blue-600 border-blue-500 text-white glow-blue" : "bg-zinc-800 text-zinc-500 border-white/5"
+              showInactive ? "bg-blue-600 border-blue-500 text-white" : "bg-zinc-800 text-zinc-500 border-white/5"
             )}
           >
             {showInactive ? 'Viendo Todos' : 'Ver Solo Activos'}
@@ -2556,7 +2562,7 @@ function BarbersView() {
           {filteredBarbers.length > 0 ? filteredBarbers.map((barber) => (
             <div key={barber.id} className="card p-8 group hover:border-blue-500/30 transition-all">
               <div className="flex items-center justify-between mb-6">
-                <div className="w-16 h-16 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-2xl font-black border border-blue-500/30 glow-blue">
+                <div className="w-16 h-16 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-2xl font-black border border-blue-500/30">
                   {barber.name.charAt(0)}
                 </div>
                 <span className={cn(
@@ -3477,8 +3483,7 @@ function FinanceView() {
           </div>
           <button 
             onClick={() => setIsAddingExpense(true)}
-            className="btn-primary"
-            style={{ background: 'var(--grad-red)', boxShadow: 'var(--glow-red)' }}
+            className="btn-primary bg-red-600 shadow-lg"
           >
             <Plus className="w-5 h-5" />
             Registrar Gasto
@@ -3544,7 +3549,7 @@ function FinanceView() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="card border-l-4 border-blue-500 glow-blue">
+        <div className="card border-l-4 border-blue-500">
           <div className="p-8">
             <div className="flex items-center gap-3 mb-4 opacity-80">
               <Wallet className="w-5 h-5 text-blue-400" />
@@ -3554,7 +3559,7 @@ function FinanceView() {
             <p className="text-xs mt-4 font-medium text-zinc-500">Basado en {sales.length} ventas</p>
           </div>
         </div>
-        <div className="card border-l-4 border-red-500 glow-red">
+        <div className="card border-l-4 border-red-500">
           <div className="p-8">
             <div className="flex items-center gap-3 mb-4 opacity-80">
               <CreditCard className="w-5 h-5 text-red-400" />
@@ -3564,7 +3569,7 @@ function FinanceView() {
             <p className="text-xs mt-4 font-medium text-zinc-500">Basado en {expenses.length} gastos</p>
           </div>
         </div>
-        <div className="card border-l-4 border-emerald-500 glow-emerald">
+        <div className="card border-l-4 border-emerald-500">
           <div className="p-8">
             <div className="flex items-center gap-3 mb-4 opacity-80">
               <TrendingUp className="w-5 h-5 text-emerald-400" />
@@ -3710,7 +3715,7 @@ function VIPView() {
   return (
     <div className="space-y-8 pb-10">
       <div className="text-center space-y-2 pt-4">
-        <div className="inline-flex items-center justify-center p-3 bg-yellow-500/10 rounded-2xl mb-2 glow-yellow">
+        <div className="inline-flex items-center justify-center p-3 bg-yellow-500/10 rounded-2xl mb-2">
           <Trophy className="w-8 h-8 text-yellow-500" />
         </div>
         <h2 className="text-4xl font-black text-white tracking-tight uppercase italic">Club VIP</h2>
@@ -3732,8 +3737,8 @@ function VIPView() {
               transition={{ delay: index * 0.05 }}
               className={cn(
                 "card p-6 relative overflow-hidden group transition-all hover:translate-y-[-4px]",
-                client.stars === 5 ? "border-yellow-500/30 bg-yellow-500/5 glow-yellow" : 
-                client.stars === 4 ? "border-blue-500/30 bg-blue-500/5 glow-blue" :
+                client.stars === 5 ? "border-yellow-500/30 bg-yellow-500/5" : 
+                client.stars === 4 ? "border-blue-500/30 bg-blue-500/5" :
                 "border-white/5"
               )}
             >
