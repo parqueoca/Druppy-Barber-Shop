@@ -72,6 +72,14 @@ function toTitleCase(str: string) {
   return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
 }
 
+// Utility for WhatsApp Link
+function getWhatsAppLink(phone: string) {
+  const cleanPhone = phone.replace(/\D/g, '');
+  // Si tiene 10 dígitos (ej. 809...), asumimos que falta el código de país '1' (RD/USA)
+  const finalPhone = cleanPhone.length === 10 ? `1${cleanPhone}` : cleanPhone;
+  return `https://wa.me/${finalPhone}`;
+}
+
 // Utility to get Base64 from Image URL
 const getBase64ImageFromUrl = async (url: string): Promise<string> => {
   try {
@@ -2248,7 +2256,7 @@ function ClientsView({ onTabChange, onPreselectClient }: { onTabChange: (tab: Ta
                                 <Phone className="w-3.5 h-3.5" />
                               </a>
                               <a 
-                                href={`https://wa.me/${client.phone.replace(/\D/g, '')}`}
+                                href={getWhatsAppLink(client.phone)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
