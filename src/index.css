@@ -8,23 +8,23 @@
 
 :root {
   /* Dark Mode - Immersive Deep Theme */
-  --bg-deep: #05070a;
+  --bg-deep: #1a1c20;
   --text-main: #FFFFFF;
   --text-muted: rgba(255, 255, 255, 0.8);
   
-  /* Exact Gradients from the image */
-  --grad-blue: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
-  --grad-orange: linear-gradient(180deg, #f97316 0%, #ea580c 100%);
-  --grad-green: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
-  --grad-purple: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%);
-  --grad-red: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+  /* Exact Gradients from the image - Changed to solid colors */
+  --grad-blue: #2563eb;
+  --grad-orange: #ea580c;
+  --grad-green: #16a34a;
+  --grad-purple: #9333ea;
+  --grad-red: #dc2626;
   
-  /* Glows */
-  --glow-blue: 0 10px 25px -5px rgba(37, 99, 235, 0.5);
-  --glow-orange: 0 10px 25px -5px rgba(249, 115, 22, 0.5);
-  --glow-green: 0 10px 25px -5px rgba(34, 197, 94, 0.5);
-  --glow-purple: 0 10px 25px -5px rgba(139, 92, 246, 0.5);
-  --glow-red: 0 10px 25px -5px rgba(239, 68, 68, 0.5);
+  /* Glows - Removed */
+  --glow-blue: none;
+  --glow-orange: none;
+  --glow-green: none;
+  --glow-purple: none;
+  --glow-red: none;
   
   --shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
   --bg-input: #1a1c20;
@@ -43,16 +43,11 @@ body {
   background-color: var(--bg-deep);
   color: var(--text-main);
   -webkit-tap-highlight-color: transparent;
-  background-image: 
-    radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.05) 0%, transparent 40%),
-    radial-gradient(circle at 0% 100%, rgba(37, 99, 235, 0.05) 0%, transparent 40%);
   background-attachment: fixed;
 }
 
 .light body {
-  background-image: 
-    radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.03) 0%, transparent 40%),
-    radial-gradient(circle at 0% 100%, rgba(37, 99, 235, 0.03) 0%, transparent 40%);
+  background-color: var(--bg-deep);
 }
 
 /* Glassmorphism utility */
@@ -101,9 +96,7 @@ body {
   }
   
   .btn-primary {
-    @apply text-white font-black py-3 px-6 rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs;
-    background: var(--grad-blue);
-    box-shadow: var(--glow-blue);
+    @apply text-white font-black py-3 px-6 rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs bg-blue-600 shadow-lg;
   }
 
   .btn-secondary {
