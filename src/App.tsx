@@ -334,6 +334,7 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
 }) {
   const [todaySales, setTodaySales] = useState<any[]>([]);
   const [todayPayments, setTodayPayments] = useState<any[]>([]);
+  const [todayExpenses, setTodayExpenses] = useState<any[]>([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
   const [pendingCredits, setPendingCredits] = useState<any[]>([]);
   const [showPendingCredits, setShowPendingCredits] = useState(true);
@@ -341,6 +342,8 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
   const [loading, setLoading] = useState(true);
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
   const [isPaymentsModalOpen, setIsPaymentsModalOpen] = useState(false);
+  const [isAppsModalOpen, setIsAppsModalOpen] = useState(false);
+  const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const gracePeriod = useMemo(() => {
@@ -364,9 +367,10 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
       const start = startOfDay(today).toISOString();
       const end = endOfDay(today).toISOString();
 
-      const [salesRes, paymentsRes, appsCountRes, nextAppsRes, creditsRes] = await Promise.all([
+      const [salesRes, paymentsRes, expensesRes, appsCountRes, nextAppsRes, allTodayAppsRes, creditsRes] = await Promise.all([
         supabase.from('sales').select('*, clients(name)').gte('created_at', start).lte('created_at', end),
         supabase.from('sale_payments').select('*, sales(*, clients(name))').gte('created_at', start).lte('created_at', end),
+        supabase.from('expenses').select('*').gte('created_at', start).lte('created_at', end),
         supabase.from('appointments').select('id', { count: 'exact', head: true }).gte('appointment_time', start).lte('appointment_time', end),
         supabase.from('appointments')
           .select('*, clients(name), barbers(name)')
@@ -374,6 +378,11 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
           .in('status', ['pending', 'confirmed'])
           .order('appointment_time')
           .limit(5),
+        supabase.from('appointments')
+          .select('*, clients(name), barbers(name)')
+          .gte('appointment_time', start)
+          .lte('appointment_time', end)
+          .order('appointment_time'),
         supabase.from('sales')
           .select('*, clients(name)')
           .eq('is_paid', false)
@@ -383,13 +392,17 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
 
       if (salesRes.error) throw salesRes.error;
       if (paymentsRes.error) throw paymentsRes.error;
+      if (expensesRes.error) throw expensesRes.error;
       if (appsCountRes.error) throw appsCountRes.error;
       if (nextAppsRes.error) throw nextAppsRes.error;
+      if (allTodayAppsRes.error) throw allTodayAppsRes.error;
       if (creditsRes.error) throw creditsRes.error;
 
       setTodaySales(salesRes.data || []);
       setTodayPayments(paymentsRes.data || []);
+      setTodayExpenses(expensesRes.data || []);
       setUpcomingAppointments(nextAppsRes.data || []);
+      setTodayAppointments(allTodayAppsRes.data || []);
       setTodayAppsCount(appsCountRes.count || 0);
       
       // Filter credits due within 2 days (today and tomorrow)
@@ -407,6 +420,8 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
   }
 
   const totalIncome = todaySales.reduce((acc, s) => acc + s.total_amount, 0);
+  const totalExpenses = todayExpenses.reduce((acc, e) => acc + e.amount, 0);
+  const netProfit = totalIncome - totalExpenses;
   
   // Real collected = (Non-credit sales today) + (Payments recorded today)
   const totalCollected = 
@@ -651,7 +666,7 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
           <h3 className="text-base font-bold text-white/90">Resumen de Hoy</h3>
           <button onClick={() => onTabChange('sales')} className="text-xs font-bold text-red-500 hover:text-red-400 transition-colors">Ver todo &gt;</button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <button 
             onClick={() => setIsSalesModalOpen(true)}
             className="glass p-4 rounded-2xl relative overflow-hidden border-white/5 group text-left"
@@ -678,7 +693,23 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
               <DollarSign className="w-10 h-10 text-emerald-400" />
             </div>
           </button>
-          <div className="glass p-4 rounded-2xl relative overflow-hidden border-white/5 group">
+          <button 
+            onClick={() => onTabChange('finance')}
+            className="glass p-4 rounded-2xl relative overflow-hidden border-white/5 group text-left"
+          >
+            <div className="absolute inset-0 bg-red-600/5 group-hover:bg-red-600/10 transition-colors" />
+            <div className="relative z-10 flex flex-col gap-0.5">
+              <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Gastos Hoy</p>
+              <h4 className="text-xl font-black text-red-400">RD$ {totalExpenses.toLocaleString()}</h4>
+            </div>
+            <div className="absolute right-2 bottom-2 opacity-30">
+              <CreditCard className="w-10 h-10 text-red-400" />
+            </div>
+          </button>
+          <button 
+            onClick={() => setIsAppsModalOpen(true)}
+            className="glass p-4 rounded-2xl relative overflow-hidden border-white/5 group text-left"
+          >
             <div className="absolute inset-0 bg-orange-600/5 group-hover:bg-orange-600/10 transition-colors" />
             <div className="relative z-10 flex flex-col gap-0.5">
               <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Citas Hoy</p>
@@ -687,9 +718,69 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
             <div className="absolute right-2 bottom-2 opacity-30">
               <Calendar className="w-10 h-10 text-orange-400" />
             </div>
-          </div>
+          </button>
         </div>
       </div>
+
+      {isAppsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-zinc-900 border border-white/10 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl"
+          >
+            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-white">Citas de Hoy</h3>
+              <button onClick={() => setIsAppsModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors text-zinc-400">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
+              {todayAppointments.length === 0 ? (
+                <p className="text-center text-zinc-500 py-4">No hay citas programadas para hoy.</p>
+              ) : (
+                todayAppointments.map((app) => (
+                  <div key={app.id} className="flex justify-between items-center pb-4 border-b border-white/5 last:border-0">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-white">{app.clients?.name || 'Cliente'}</p>
+                        <span className={cn(
+                          "text-[8px] px-1.5 py-0.5 rounded-full border uppercase font-bold",
+                          app.status === 'completed' ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5' :
+                          app.status === 'confirmed' ? 'border-blue-500/20 text-blue-400 bg-blue-500/5' :
+                          app.status === 'cancelled' ? 'border-red-500/20 text-red-400 bg-red-500/5' :
+                          'border-zinc-500/20 text-zinc-400 bg-zinc-500/5'
+                        )}>
+                          {app.status === 'pending' ? 'Pendiente' : 
+                           app.status === 'confirmed' ? 'Confirmada' :
+                           app.status === 'completed' ? 'Completada' : 'Cancelada'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500">
+                        {app.service} | {app.barbers?.name || 'Cualquiera'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-black text-white">{format(new Date(app.appointment_time), "hh:mm a")}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="p-6 bg-white/5">
+              <button 
+                onClick={() => {
+                  setIsAppsModalOpen(false);
+                  onTabChange('appointments');
+                }}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all"
+              >
+                Ir a la Agenda
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Upcoming Appointments */}
       <div className="space-y-3">
@@ -3348,6 +3439,7 @@ function FinanceView() {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [barbers, setBarbers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [pendingCredits, setPendingCredits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddingExpense, setIsAddingExpense] = useState(false);
   const [startDate, setStartDate] = useState(format(startOfDay(new Date()), 'yyyy-MM-dd'));
@@ -3368,7 +3460,7 @@ function FinanceView() {
       const start = startOfDay(new Date(startDate + 'T00:00:00')).toISOString();
       const end = endOfDay(new Date(endDate + 'T23:59:59')).toISOString();
 
-      const [salesRes, expensesRes, barbersRes, categoriesRes] = await Promise.all([
+      const [salesRes, expensesRes, barbersRes, categoriesRes, creditsRes] = await Promise.all([
         supabase.from('sales')
           .select('*, barbers(name)')
           .gte('created_at', start)
@@ -3380,7 +3472,12 @@ function FinanceView() {
           .lte('created_at', end)
           .order('created_at', { ascending: false }),
         supabase.from('barbers').select('*').eq('active', true),
-        supabase.from('expense_categories').select('*').eq('active', true).order('name')
+        supabase.from('expense_categories').select('*').eq('active', true).order('name'),
+        supabase.from('sales')
+          .select('*, clients(name)')
+          .eq('is_paid', false)
+          .not('due_date', 'is', null)
+          .order('due_date')
       ]);
 
       if (salesRes.error) throw salesRes.error;
@@ -3388,6 +3485,7 @@ function FinanceView() {
       setExpenses(expensesRes.data || []);
       setBarbers(barbersRes.data || []);
       setCategories(categoriesRes.data || []);
+      setPendingCredits(creditsRes.data || []);
       
       if (categoriesRes.data && categoriesRes.data.length > 0 && !newExpense.category) {
         setNewExpense(prev => ({ ...prev, category: categoriesRes.data[0].name }));
@@ -3420,7 +3518,142 @@ function FinanceView() {
 
   const totalIncome = sales.reduce((acc, s) => acc + s.total_amount, 0);
   const totalExpenses = expenses.reduce((acc, e) => acc + e.amount, 0);
+  const totalReceivables = pendingCredits.reduce((acc, c) => acc + (c.total_amount - (c.paid_amount || 0)), 0);
   const netProfit = totalIncome - totalExpenses;
+
+  const generateFinancialReport = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    
+    // Header with Logo placeholder or text
+    doc.setFontSize(24);
+    doc.setTextColor(30, 41, 59); // Slate-800
+    doc.text('DRUPPY BARBER SHOP', pageWidth / 2, 20, { align: 'center' });
+    
+    doc.setFontSize(16);
+    doc.setTextColor(71, 85, 105); // Slate-600
+    doc.text('ESTADO DE RESULTADOS Y BALANCE OPERATIVO', pageWidth / 2, 30, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139); // Slate-500
+    doc.text(`Periodo Contable: ${format(new Date(startDate), 'dd/MM/yyyy')} al ${format(new Date(endDate), 'dd/MM/yyyy')}`, pageWidth / 2, 38, { align: 'center' });
+    doc.text(`Fecha de Emisión: ${format(new Date(), 'dd/MM/yyyy hh:mm a')}`, pageWidth / 2, 44, { align: 'center' });
+
+    // 1. RESUMEN FINANCIERO (Executive Summary)
+    doc.setFontSize(14);
+    doc.setTextColor(30, 41, 59);
+    doc.text('1. RESUMEN EJECUTIVO', 14, 55);
+    
+    autoTable(doc, {
+      startY: 60,
+      head: [['Indicador Clave', 'Valor (RD$)', 'Descripción']],
+      body: [
+        ['INGRESOS TOTALES', totalIncome.toLocaleString(), 'Total bruto de ventas realizadas'],
+        ['GASTOS OPERATIVOS', totalExpenses.toLocaleString(), 'Costos fijos y variables del periodo'],
+        ['UTILIDAD NETA', netProfit.toLocaleString(), 'Ganancia real después de gastos'],
+        ['CUENTAS POR COBRAR', totalReceivables.toLocaleString(), 'Dinero pendiente de cobro (Créditos)'],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 10, cellPadding: 5 },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 50 },
+        1: { halign: 'right', fontStyle: 'bold', textColor: [16, 185, 129], cellWidth: 40 },
+        2: { fontStyle: 'italic', textColor: [100, 116, 139] }
+      }
+    });
+
+    // 2. DESGLOSE DE INGRESOS POR MÉTODO DE PAGO
+    const incomeByMethod = sales.reduce((acc: any, s) => {
+      const method = s.payment_method || 'Otros';
+      acc[method] = (acc[method] || 0) + s.total_amount;
+      return acc;
+    }, {});
+
+    doc.text('2. DESGLOSE DE INGRESOS POR MÉTODO', 14, (doc as any).lastAutoTable.finalY + 15);
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 20,
+      head: [['Método de Pago', 'Monto Acumulado', '% del Total']],
+      body: Object.entries(incomeByMethod).map(([method, amount]: [string, any]) => [
+        method,
+        `RD$ ${amount.toLocaleString()}`,
+        `${((amount / (totalIncome || 1)) * 100).toFixed(1)}%`
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [71, 85, 105] },
+      styles: { fontSize: 9 },
+    });
+
+    // 3. DESGLOSE DE GASTOS POR CATEGORÍA
+    const expensesByCategory = expenses.reduce((acc: any, e) => {
+      const cat = e.category || 'General';
+      acc[cat] = (acc[cat] || 0) + e.amount;
+      return acc;
+    }, {});
+
+    doc.text('3. DESGLOSE DE GASTOS POR CATEGORÍA', 14, (doc as any).lastAutoTable.finalY + 15);
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 20,
+      head: [['Categoría de Gasto', 'Monto Invertido', '% del Gasto']],
+      body: Object.entries(expensesByCategory).map(([cat, amount]: [string, any]) => [
+        cat,
+        `RD$ ${amount.toLocaleString()}`,
+        `${((amount / (totalExpenses || 1)) * 100).toFixed(1)}%`
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [185, 28, 28] }, // Red-700
+      styles: { fontSize: 9 },
+    });
+
+    // 4. RENDIMIENTO DE BARBEROS (COMISIONES)
+    doc.addPage();
+    doc.text('4. RENDIMIENTO Y COMISIONES DE BARBEROS', 14, 20);
+    autoTable(doc, {
+      startY: 25,
+      head: [['Barbero', 'Ventas Generadas', 'Comisión Acumulada', '% Promedio']],
+      body: barberCommissions.map(b => [
+        b.name,
+        `RD$ ${b.sales.toLocaleString()}`,
+        `RD$ ${b.commissionAmount.toLocaleString()}`,
+        `${Math.round((b.commissionAmount / (b.sales || 1)) * 100)}%`
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: [245, 158, 11] }, // Amber-500
+      styles: { fontSize: 9 },
+    });
+
+    // 5. CUENTAS POR COBRAR DETALLADAS
+    if (pendingCredits.length > 0) {
+      doc.text('5. CUENTAS POR COBRAR (CRÉDITOS ACTIVOS)', 14, (doc as any).lastAutoTable.finalY + 15);
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 20,
+        head: [['Cliente', 'Fecha Venta', 'Vencimiento', 'Total', 'Pagado', 'Pendiente']],
+        body: pendingCredits.map(c => [
+          c.clients?.name || 'Cliente',
+          format(new Date(c.created_at), 'dd/MM/yy'),
+          format(new Date(c.due_date), 'dd/MM/yy'),
+          `RD$ ${c.total_amount.toLocaleString()}`,
+          `RD$ ${(c.paid_amount || 0).toLocaleString()}`,
+          `RD$ ${(c.total_amount - (c.paid_amount || 0)).toLocaleString()}`
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [217, 119, 6] }, // Amber-600
+        styles: { fontSize: 8 },
+      });
+    }
+
+    // Footer on all pages
+    const totalPages = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(`Página ${i} de ${totalPages}`, pageWidth - 25, doc.internal.pageSize.height - 10);
+      doc.text('Druppy Barber Shop - Sistema de Gestión Contable', 14, doc.internal.pageSize.height - 10);
+    }
+
+    doc.save(`Reporte_Contable_Druppy_${startDate}_${endDate}.pdf`);
+  };
 
   const barberCommissions = useMemo(() => {
     const comms: Record<string, { name: string, sales: number, commissionAmount: number }> = {};
@@ -3488,6 +3721,13 @@ function FinanceView() {
             </div>
           </div>
           <button 
+            onClick={generateFinancialReport}
+            className="btn-primary bg-blue-600 shadow-lg"
+          >
+            <FileText className="w-5 h-5" />
+            Generar Reporte PDF
+          </button>
+          <button 
             onClick={() => setIsAddingExpense(true)}
             className="btn-primary bg-red-600 shadow-lg"
           >
@@ -3554,7 +3794,7 @@ function FinanceView() {
         </motion.div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="card border-l-4 border-blue-500">
           <div className="p-8">
             <div className="flex items-center gap-3 mb-4 opacity-80">
@@ -3573,6 +3813,16 @@ function FinanceView() {
             </div>
             <h3 className="text-3xl font-bold text-red-400">RD$ {totalExpenses.toLocaleString()}</h3>
             <p className="text-xs mt-4 font-medium text-zinc-500">Basado en {expenses.length} gastos</p>
+          </div>
+        </div>
+        <div className="card border-l-4 border-orange-500">
+          <div className="p-8">
+            <div className="flex items-center gap-3 mb-4 opacity-80">
+              <AlertCircle className="w-5 h-5 text-orange-400" />
+              <span className="text-sm font-medium text-zinc-400">Por Cobrar</span>
+            </div>
+            <h3 className="text-3xl font-bold text-orange-400">RD$ {totalReceivables.toLocaleString()}</h3>
+            <p className="text-xs mt-4 font-medium text-zinc-500">{pendingCredits.length} créditos pendientes</p>
           </div>
         </div>
         <div className="card border-l-4 border-emerald-500">
@@ -3903,35 +4153,46 @@ function ReportsView() {
 
   const generateFinancePDF = async () => {
     const doc = new jsPDF();
-    const title = "DRUPPY BARBER SHOP";
-    const subtitle = "Reporte de Finanzas Detallado";
-    const dateStr = `Periodo: ${format(new Date(dateRange.start), 'dd/MM/yyyy')} al ${format(new Date(dateRange.end), 'dd/MM/yyyy')}`;
-
-    // Logo
-    try {
-      const logoBase64 = await getBase64ImageFromUrl('/logodruppy.png');
-      if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', 10, 10, 25, 25);
-      }
-    } catch (e) {
-      console.warn('Could not add logo to PDF', e);
-    }
-
+    const pageWidth = doc.internal.pageSize.width;
+    
     // Header
     doc.setFontSize(22);
-    doc.setTextColor(44, 62, 80);
-    doc.text(title, 105, 20, { align: 'center' });
+    doc.setTextColor(30, 41, 59);
+    doc.text('DRUPPY BARBER SHOP', pageWidth / 2, 20, { align: 'center' });
     
     doc.setFontSize(16);
-    doc.text(subtitle, 105, 30, { align: 'center' });
+    doc.setTextColor(71, 85, 105);
+    doc.text('REPORTE DE VENTAS Y FINANZAS DETALLADO', pageWidth / 2, 30, { align: 'center' });
     
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(dateStr, 105, 38, { align: 'center' });
-    doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy hh:mm a')}`, 105, 44, { align: 'center' });
+    doc.text(`Periodo: ${format(new Date(dateRange.start), 'dd/MM/yyyy')} al ${format(new Date(dateRange.end), 'dd/MM/yyyy')}`, pageWidth / 2, 38, { align: 'center' });
+    doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy hh:mm a')}`, pageWidth / 2, 44, { align: 'center' });
 
+    // Summary Table
+    const total = filteredSales.reduce((acc, s) => acc + s.total_amount, 0);
+    const byMethod = filteredSales.reduce((acc: any, s) => {
+      const m = s.payment_method || 'Otros';
+      acc[m] = (acc[m] || 0) + s.total_amount;
+      return acc;
+    }, {});
+
+    autoTable(doc, {
+      startY: 55,
+      head: [['Resumen de Ingresos', 'Monto (RD$)']],
+      body: [
+        ...Object.entries(byMethod).map(([m, a]: [string, any]) => [m, a.toLocaleString()]),
+        [{ content: 'TOTAL GENERAL', styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }, { content: total.toLocaleString(), styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }]
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [30, 41, 59] },
+      styles: { fontSize: 10 }
+    });
+
+    // Detailed Table
+    doc.text('DETALLE DE TRANSACCIONES', 14, (doc as any).lastAutoTable.finalY + 15);
     const tableData = filteredSales.map(s => [
-      format(new Date(s.created_at), 'dd/MM/yyyy hh:mm a'),
+      format(new Date(s.created_at), 'dd/MM/yy HH:mm'),
       clients.find(c => c.id === s.client_id)?.name || 'Ocasional',
       barbers.find(b => b.id === s.barber_id)?.name || 'N/A',
       s.services || 'N/A',
@@ -3940,22 +4201,16 @@ function ReportsView() {
     ]);
 
     autoTable(doc, {
-      startY: 50,
+      startY: (doc as any).lastAutoTable.finalY + 20,
       head: [['Fecha', 'Cliente', 'Barbero', 'Servicio', 'Método', 'Monto']],
       body: tableData,
       theme: 'striped',
       headStyles: { fillColor: [44, 62, 80], textColor: [255, 255, 255] },
       alternateRowStyles: { fillColor: [245, 245, 245] },
+      styles: { fontSize: 8 }
     });
 
-    const total = filteredSales.reduce((acc, s) => acc + s.total_amount, 0);
-    const finalY = (doc as any).lastAutoTable.finalY || 60;
-    
-    doc.setFontSize(12);
-    doc.setTextColor(44, 62, 80);
-    doc.text(`Total del Periodo: RD$ ${total.toLocaleString()}`, 190, finalY + 10, { align: 'right' });
-
-    doc.save(`Reporte_Finanzas_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
+    doc.save(`Reporte_Finanzas_Druppy_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
   };
 
   const generateClientsPDF = async () => {
