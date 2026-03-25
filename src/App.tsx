@@ -132,7 +132,10 @@ export default function App() {
       {/* Desktop Sidebar (Hidden on Mobile) */}
       <aside 
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-zinc-200 text-zinc-900 transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 hidden lg:flex flex-col p-6"
+          "fixed inset-y-0 left-0 z-50 w-64 transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 hidden lg:flex flex-col p-6",
+          isDarkMode 
+            ? "bg-gradient-to-r from-white via-white via-80% to-transparent border-r border-white/5" 
+            : "bg-gradient-to-r from-white via-white via-85% to-transparent border-r border-zinc-200"
         )}
       >
         <div className="flex flex-col items-center gap-4 mb-10 text-center">
@@ -193,8 +196,11 @@ export default function App() {
       </aside>
 
       {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-28 bg-white border-b border-zinc-200 flex items-center justify-between px-5 flex-shrink-0 lg:hidden shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
-        <div className="flex items-center gap-4">
+      <header className={cn(
+        "fixed top-0 left-0 right-0 z-50 h-32 flex items-center justify-between px-5 flex-shrink-0 lg:hidden transition-all duration-300",
+        "bg-gradient-to-b from-white via-white via-75% to-transparent"
+      )}>
+        <div className="flex items-center gap-4 -mt-4">
           <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center overflow-hidden border-2 border-zinc-100 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
             <img 
               src="/logodruppy.png" 
@@ -250,7 +256,7 @@ export default function App() {
       </nav>
 
       {/* Content Area */}
-      <main className="flex-1 overflow-y-auto pt-28 lg:pt-0 pb-24 lg:pb-0 relative">
+      <main className="flex-1 overflow-y-auto pt-32 lg:pt-0 pb-24 lg:pb-0 relative">
         {/* Background Glows */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full animate-pulse-glow" />
