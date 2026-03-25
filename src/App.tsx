@@ -72,6 +72,23 @@ function toTitleCase(str: string) {
   return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
 }
 
+// Utility to get Base64 from Image URL
+const getBase64ImageFromUrl = async (url: string): Promise<string> => {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Error loading logo for PDF:', error);
+    return '';
+  }
+};
+
 // Types
 type Tab = 'dashboard' | 'appointments' | 'clients' | 'services' | 'barbers' | 'sales' | 'finance' | 'settings' | 'payment_methods' | 'expense_categories' | 'vip' | 'reports';
 
@@ -111,8 +128,21 @@ export default function App() {
         )}
       >
         <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg glow-blue">
-            <Scissors className="text-white w-6 h-6" />
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg glow-blue overflow-hidden">
+            <img 
+              src="/logodruppy.png" 
+              alt="Logo" 
+              className="w-full h-full object-cover" 
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  const icon = document.createElement('div');
+                  icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-scissors text-white w-6 h-6"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>';
+                  parent.appendChild(icon.firstChild as Node);
+                }
+              }}
+            />
           </div>
           <h1 className="text-xl font-bold tracking-tight">Druppy Barber <span className="text-red-500">Shop</span></h1>
         </div>
@@ -155,7 +185,22 @@ export default function App() {
       {/* Mobile Header */}
       <header className="fixed top-0 left-0 right-0 z-50 h-16 glass border-b border-white/10 flex items-center justify-between px-5 flex-shrink-0 lg:hidden">
         <div className="flex items-center gap-2">
-          <Scissors className="text-blue-500 w-6 h-6" />
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center overflow-hidden">
+            <img 
+              src="/logodruppy.png" 
+              alt="Logo" 
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  const icon = document.createElement('div');
+                  icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-scissors text-blue-500 w-6 h-6"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>';
+                  parent.appendChild(icon.firstChild as Node);
+                }
+              }}
+            />
+          </div>
           <h1 className="text-lg font-bold tracking-tight">Druppy Barber <span className="text-red-500">Shop</span></h1>
         </div>
         <button 
@@ -3794,11 +3839,21 @@ function ReportsView() {
     return result;
   }, [clients, sortBy]);
 
-  const generateFinancePDF = () => {
+  const generateFinancePDF = async () => {
     const doc = new jsPDF();
     const title = "DRUPPY BARBER SHOP";
     const subtitle = "Reporte de Finanzas Detallado";
     const dateStr = `Periodo: ${format(new Date(dateRange.start), 'dd/MM/yyyy')} al ${format(new Date(dateRange.end), 'dd/MM/yyyy')}`;
+
+    // Logo
+    try {
+      const logoBase64 = await getBase64ImageFromUrl('/logodruppy.png');
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', 10, 10, 25, 25);
+      }
+    } catch (e) {
+      console.warn('Could not add logo to PDF', e);
+    }
 
     // Header
     doc.setFontSize(22);
@@ -3841,10 +3896,20 @@ function ReportsView() {
     doc.save(`Reporte_Finanzas_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`);
   };
 
-  const generateClientsPDF = () => {
+  const generateClientsPDF = async () => {
     const doc = new jsPDF();
     const title = "DRUPPY BARBER SHOP";
     const subtitle = "Reporte de Clientes Registrados";
+
+    // Logo
+    try {
+      const logoBase64 = await getBase64ImageFromUrl('/logodruppy.png');
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', 10, 10, 25, 25);
+      }
+    } catch (e) {
+      console.warn('Could not add logo to PDF', e);
+    }
 
     // Header
     doc.setFontSize(22);
