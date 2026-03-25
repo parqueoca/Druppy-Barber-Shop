@@ -935,15 +935,20 @@ function AppointmentsView({
         const service = services.find(s => s.name === currentApp.service);
         const { data: { user } } = await supabase.auth.getUser();
         
-        // Use the first active payment method or default to 'Efectivo'
-        const paymentMethod = paymentMethods.length > 0 ? paymentMethods[0].name : 'Efectivo';
+        // Prefer 'Efectivo' as default payment method
+        const efectivo = paymentMethods.find(m => m.name === 'Efectivo');
+        const paymentMethod = efectivo ? efectivo.name : (paymentMethods.length > 0 ? paymentMethods[0].name : 'Efectivo');
+        const totalAmount = service ? service.price : 0;
+        const isPaid = paymentMethod !== 'Crédito';
 
         const { error: saleError } = await supabase.from('sales').insert([{
           client_id: currentApp.client_id,
           barber_id: currentApp.barber_id,
           services: currentApp.service,
-          total_amount: service ? service.price : 0,
+          total_amount: totalAmount,
           payment_method: paymentMethod,
+          is_paid: isPaid,
+          paid_amount: isPaid ? totalAmount : 0,
           user_id: user?.id,
           commission_rate: currentApp.commission_rate || 1.0,
           note: `Venta automática de cita #${id.slice(0, 8)}`
@@ -1360,7 +1365,8 @@ function SalesView() {
       setPaymentMethods(methodsRes.data || []);
       
       if (methodsRes.data && methodsRes.data.length > 0) {
-        setNewSale(prev => ({ ...prev, payment_method: methodsRes.data[0].name }));
+        const efectivo = methodsRes.data.find(m => m.name === 'Efectivo');
+        setNewSale(prev => ({ ...prev, payment_method: efectivo ? efectivo.name : methodsRes.data[0].name }));
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -1400,12 +1406,13 @@ function SalesView() {
       if (error) throw error;
 
       setIsAddingSale(false);
+      const defaultMethod = paymentMethods.find(m => m.name === 'Efectivo')?.name || paymentMethods[0]?.name || '';
       setNewSale({
         client_id: '',
         barber_id: '',
         services: '',
         total_amount: 0,
-        payment_method: paymentMethods[0]?.name || '',
+        payment_method: defaultMethod,
         note: '',
         due_date: '',
         commission_rate: 100
@@ -1757,156 +1764,155 @@ function SalesView() {
         </motion.div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 card overflow-hidden">
-          <div className="p-6 border-b border-white/5">
-            <h4 className="font-black text-white tracking-tight">Ventas Recientes</h4>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-zinc-900/50 text-[11px] uppercase tracking-widest font-bold text-zinc-500">
-                  <th className="px-6 py-4">Cliente</th>
-                  <th className="px-6 py-4">Barbero</th>
-                  <th className="px-6 py-4">Servicios</th>
-                  <th className="px-6 py-4">Total</th>
-                  <th className="px-6 py-4">Estado / Pago</th>
-                  <th className="px-6 py-4 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-10 text-center text-zinc-500 font-medium">Cargando ventas...</td>
-                  </tr>
-                ) : sales.length > 0 ? sales.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-white/5 transition-colors group">
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-bold text-zinc-200">{sale.clients?.name || 'Cliente ocasional'}</p>
-                      <p className="text-[10px] text-zinc-500 font-medium">{format(new Date(sale.created_at), "dd/MM HH:mm")}</p>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-zinc-400 font-medium">{sale.barbers?.name || '---'}</td>
-                    <td className="px-6 py-4 text-sm text-zinc-400 font-medium">{sale.services}</td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-black text-emerald-400">RD$ {sale.total_amount.toLocaleString()}</p>
-                      {sale.payment_method === 'Crédito' && (
-                        <p className="text-[10px] text-orange-400 font-bold">
-                          Pagado: RD$ {(sale.paid_amount || 0).toLocaleString()}
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <span className={`text-[10px] font-bold px-2 py-1 rounded block w-fit border ${
-                          sale.is_paid 
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                            : 'bg-orange-500/10 text-orange-400 border-orange-500/20'
-                        }`}>
-                          {sale.payment_method} {sale.is_paid ? '(Pagado)' : '(Pendiente)'}
-                        </span>
-                        {sale.due_date && !sale.is_paid && (
-                          <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-tighter">
-                            Vence: {format(new Date(sale.due_date), "dd MMM")}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {sale.clients?.phone && (
-                          <a 
-                            href={getWhatsAppLink(sale.clients.phone)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
-                            title="Enviar WhatsApp"
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                          </a>
-                        )}
-                        {!sale.is_paid && sale.payment_method === 'Crédito' && (
-                          <button 
-                            onClick={() => {
-                              setPaymentSale(sale);
-                              setIsAddingPayment(true);
-                              setPaymentAmount(sale.total_amount - (sale.paid_amount || 0));
-                            }}
-                            className="p-2 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white rounded-lg transition-all"
-                            title="Registrar Cobro"
-                          >
-                            <DollarSign className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button 
-                          onClick={() => {
-                            setEditingSale(sale);
-                            setIsEditingSale(true);
-                          }}
-                          className="p-2 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white rounded-lg transition-all"
-                          title="Editar"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteSale(sale.id)}
-                          className="p-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition-all"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-10 text-center text-zinc-500 font-medium">No hay ventas registradas</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-[#050505] text-white p-8 rounded-2xl shadow-xl border border-white/5 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 blur-[60px] rounded-full -mr-16 -mt-16 group-hover:bg-orange-500/20 transition-all" />
+          <p className="text-zinc-400 text-sm font-medium mb-2 uppercase tracking-widest">Total Ventas Hoy</p>
+          <h3 className="text-3xl font-black mb-6 text-white tracking-tight">RD$ {totalToday.toLocaleString()}</h3>
+          <div className="space-y-4">
+            {incomeByMethod.length > 0 ? incomeByMethod.map((m, i) => (
+              <div key={i} className="flex items-center justify-between text-sm">
+                <span className="text-zinc-400 font-medium">{m.name}</span>
+                <span className="font-black text-white">RD$ {m.amount.toLocaleString()}</span>
+              </div>
+            )) : (
+              <p className="text-xs text-zinc-500 italic font-medium">No hay ingresos hoy</p>
+            )}
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-[#050505] text-white p-8 rounded-2xl shadow-xl border border-white/5 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 blur-[60px] rounded-full -mr-16 -mt-16 group-hover:bg-orange-500/20 transition-all" />
-            <p className="text-zinc-400 text-sm font-medium mb-2 uppercase tracking-widest">Total Ventas Hoy</p>
-            <h3 className="text-3xl font-black mb-6 text-white tracking-tight">RD$ {totalToday.toLocaleString()}</h3>
-            <div className="space-y-4">
-              {incomeByMethod.length > 0 ? incomeByMethod.map((m, i) => (
-                <div key={i} className="flex items-center justify-between text-sm">
-                  <span className="text-zinc-400 font-medium">{m.name}</span>
-                  <span className="font-black text-white">RD$ {m.amount.toLocaleString()}</span>
+        <div className="card p-6">
+          <h4 className="font-black text-white tracking-tight mb-4">Top Servicios</h4>
+          <div className="space-y-4">
+            {topServices.length > 0 ? topServices.map((s, i) => (
+              <div key={i} className="space-y-2">
+                <div className="flex justify-between text-xs font-bold text-zinc-300">
+                  <span className="tracking-tight">{s.name}</span>
+                  <span>{s.count}</span>
                 </div>
-              )) : (
-                <p className="text-xs text-zinc-500 italic font-medium">No hay ingresos hoy</p>
-              )}
-            </div>
-          </div>
-
-          <div className="card p-6">
-            <h4 className="font-black text-white tracking-tight mb-4">Top Servicios</h4>
-            <div className="space-y-4">
-              {topServices.length > 0 ? topServices.map((s, i) => (
-                <div key={i} className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold text-zinc-300">
-                    <span className="tracking-tight">{s.name}</span>
-                    <span>{s.count}</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden border border-white/5">
-                    <div 
-                      className={cn("h-full rounded-full shadow-[0_0_8px_rgba(0,0,0,0.3)]", serviceColors[i % serviceColors.length])} 
-                      style={{ width: `${(s.count / maxServiceCount) * 100}%` }}
-                    ></div>
-                  </div>
+                <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden border border-white/5">
+                  <div 
+                    className={cn("h-full rounded-full shadow-[0_0_8px_rgba(0,0,0,0.3)]", serviceColors[i % serviceColors.length])} 
+                    style={{ width: `${(s.count / maxServiceCount) * 100}%` }}
+                  ></div>
                 </div>
-              )) : (
-                <p className="text-xs text-zinc-500 italic py-4 text-center font-medium">No hay datos de servicios</p>
-              )}
-            </div>
+              </div>
+            )) : (
+              <p className="text-xs text-zinc-500 italic py-4 text-center font-medium">No hay datos de servicios</p>
+            )}
           </div>
         </div>
       </div>
+
+      <div className="card overflow-hidden">
+        <div className="p-6 border-b border-white/5">
+          <h4 className="font-black text-white tracking-tight">Ventas Recientes</h4>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-zinc-900/50 text-[11px] uppercase tracking-widest font-bold text-zinc-500">
+                <th className="px-6 py-4">Cliente</th>
+                <th className="px-6 py-4">Barbero</th>
+                <th className="px-6 py-4">Servicios</th>
+                <th className="px-6 py-4">Total</th>
+                <th className="px-6 py-4">Estado / Pago</th>
+                <th className="px-6 py-4 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center text-zinc-500 font-medium">Cargando ventas...</td>
+                </tr>
+              ) : sales.length > 0 ? sales.map((sale) => (
+                <tr key={sale.id} className="hover:bg-white/5 transition-colors group">
+                  <td className="px-6 py-4">
+                    <p className="text-sm font-bold text-zinc-200">{sale.clients?.name || 'Cliente ocasional'}</p>
+                    <p className="text-[10px] text-zinc-500 font-medium">{format(new Date(sale.created_at), "dd/MM HH:mm")}</p>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-zinc-400 font-medium">{sale.barbers?.name || '---'}</td>
+                  <td className="px-6 py-4 text-sm text-zinc-400 font-medium">{sale.services}</td>
+                  <td className="px-6 py-4">
+                    <p className="text-sm font-black text-emerald-400">RD$ {sale.total_amount.toLocaleString()}</p>
+                    {sale.payment_method === 'Crédito' && (
+                      <p className="text-[10px] text-orange-400 font-bold">
+                        Pagado: RD$ {(sale.paid_amount || 0).toLocaleString()}
+                      </p>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-1">
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded block w-fit border ${
+                        sale.is_paid 
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                          : 'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                      }`}>
+                        {sale.payment_method} {sale.is_paid ? '(Pagado)' : '(Pendiente)'}
+                      </span>
+                      {sale.due_date && !sale.is_paid && (
+                        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-tighter">
+                          Vence: {format(new Date(sale.due_date), "dd MMM")}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {sale.clients?.phone && (
+                        <a 
+                          href={getWhatsAppLink(sale.clients.phone)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                          title="Enviar WhatsApp"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </a>
+                      )}
+                      {!sale.is_paid && sale.payment_method === 'Crédito' && (
+                        <button 
+                          onClick={() => {
+                            setPaymentSale(sale);
+                            setIsAddingPayment(true);
+                            setPaymentAmount(sale.total_amount - (sale.paid_amount || 0));
+                          }}
+                          className="p-2 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white rounded-lg transition-all"
+                          title="Registrar Cobro"
+                        >
+                          <DollarSign className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => {
+                          setEditingSale(sale);
+                          setIsEditingSale(true);
+                        }}
+                        className="p-2 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white rounded-lg transition-all"
+                        title="Editar"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteSale(sale.id)}
+                        className="p-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition-all"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center text-zinc-500 font-medium">No hay ventas registradas</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   );
 }
