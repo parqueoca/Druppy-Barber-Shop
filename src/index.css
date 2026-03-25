@@ -75,6 +75,7 @@ body {
 .glow-green { box-shadow: var(--glow-green); }
 .glow-purple { box-shadow: var(--glow-purple); }
 .glow-red { box-shadow: var(--glow-red); }
+.glow-blue-subtle { box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar { width: 4px; }
