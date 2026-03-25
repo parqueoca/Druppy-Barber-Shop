@@ -132,15 +132,15 @@ export default function App() {
       {/* Desktop Sidebar (Hidden on Mobile) */}
       <aside 
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 glass border-r border-white/10 text-white transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 hidden lg:flex flex-col p-6"
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-zinc-200 text-zinc-900 transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 hidden lg:flex flex-col p-6"
         )}
       >
         <div className="flex flex-col items-center gap-4 mb-10 text-center">
-          <div className="w-24 h-24 bg-blue-600 rounded-2xl flex items-center justify-center shadow-xl glow-blue overflow-hidden border-2 border-white/10">
+          <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center overflow-hidden border-2 border-zinc-100 shadow-[0_0_20px_rgba(59,130,246,0.15)] glow-blue-subtle">
             <img 
               src="/logodruppy.png" 
               alt="Logo" 
-              className="w-full h-full object-cover scale-110" 
+              className="w-full h-full object-contain scale-110" 
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 const parent = e.currentTarget.parentElement;
@@ -152,7 +152,9 @@ export default function App() {
               }}
             />
           </div>
-          <h1 className="text-2xl font-black tracking-tighter leading-none uppercase italic">Druppy Barber <span className="text-red-500 block not-italic">Shop</span></h1>
+          <h1 className="text-xl font-black tracking-tighter leading-none uppercase italic text-zinc-900">
+            DRUPPY BARBER <span className="text-red-600 not-italic">SHOP</span>
+          </h1>
         </div>
 
         <nav className="flex-1 space-y-1">
@@ -164,7 +166,7 @@ export default function App() {
                 "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative",
                 activeTab === item.id 
                   ? "bg-blue-600 text-white shadow-lg glow-blue" 
-                  : "text-zinc-500 hover:bg-white/5 hover:text-white"
+                  : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
               )}
             >
               <item.icon className={cn("w-5 h-5", activeTab === item.id ? "text-white" : "group-hover:text-white")} />
@@ -179,10 +181,10 @@ export default function App() {
           ))}
         </nav>
 
-        <div className="pt-6 border-t border-[#1F1F23] space-y-2">
+        <div className="pt-6 border-t border-zinc-100 space-y-2">
           <button 
             onClick={() => setIsDarkMode(!isDarkMode)}
-            className="w-full flex items-center gap-3 px-4 py-3 text-zinc-400 hover:text-white transition-colors rounded-xl hover:bg-white/5"
+            className="w-full flex items-center gap-3 px-4 py-3 text-zinc-500 hover:text-zinc-900 transition-colors rounded-xl hover:bg-zinc-100"
           >
             {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             <span className="font-medium">{isDarkMode ? 'Modo Claro' : 'Modo Oscuro'}</span>
@@ -191,13 +193,13 @@ export default function App() {
       </aside>
 
       {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-28 glass border-b border-white/10 flex items-center justify-between px-5 flex-shrink-0 lg:hidden">
+      <header className="fixed top-0 left-0 right-0 z-50 h-28 bg-white border-b border-zinc-200 flex items-center justify-between px-5 flex-shrink-0 lg:hidden shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
         <div className="flex items-center gap-4">
-          <div className="w-20 h-20 bg-blue-600 rounded-xl flex items-center justify-center shadow-xl glow-blue overflow-hidden border-2 border-white/10">
+          <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center overflow-hidden border-2 border-zinc-100 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
             <img 
               src="/logodruppy.png" 
               alt="Logo" 
-              className="w-full h-full object-cover scale-110"
+              className="w-full h-full object-contain scale-110"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 const parent = e.currentTarget.parentElement;
@@ -209,21 +211,20 @@ export default function App() {
               }}
             />
           </div>
-          <div className="flex flex-col">
-            <h1 className="text-xl font-black tracking-tighter leading-none uppercase italic">Druppy Barber</h1>
-            <span className="text-red-500 font-black text-lg leading-none uppercase">Shop</span>
-          </div>
+          <h1 className="text-lg font-black tracking-tighter leading-none uppercase italic text-zinc-900">
+            DRUPPY BARBER <span className="text-red-600 not-italic">SHOP</span>
+          </h1>
         </div>
         <button 
           onClick={() => setIsDarkMode(!isDarkMode)}
-          className="p-2 glass rounded-full"
+          className="p-2 bg-zinc-100 rounded-full text-zinc-600"
         >
           {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
       </header>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 h-20 glass border-t border-white/10 flex items-center justify-around px-2 lg:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 h-20 bg-white border-t border-zinc-200 flex items-center justify-around px-2 lg:hidden">
         {navItems.map((item) => (
           <button
             key={item.id}
