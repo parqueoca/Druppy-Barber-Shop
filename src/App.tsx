@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import Login from './components/Login';
+import Login from '@/src/components/Login';
 import { 
   Users, 
   Calendar, 
@@ -38,7 +38,8 @@ import {
   Trophy,
   FileText,
   Loader2,
-  Lock
+  Lock,
+  Mail
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -63,7 +64,7 @@ import {
 } from 'recharts';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { supabase } from './lib/supabase';
+import { supabase } from '@/src/lib/supabase';
 
 // Utility for tailwind classes
 function cn(...inputs: ClassValue[]) {
@@ -101,7 +102,7 @@ const getBase64ImageFromUrl = async (url: string): Promise<string> => {
 };
 
 // Types
-type Tab = 'dashboard' | 'appointments' | 'clients' | 'services' | 'barbers' | 'sales' | 'finance' | 'settings' | 'payment_methods' | 'expense_categories' | 'vip' | 'reports';
+type Tab = 'dashboard' | 'appointments' | 'clients' | 'services' | 'barbers' | 'sales' | 'finance' | 'settings' | 'payment_methods' | 'expense_categories' | 'vip' | 'reports' | 'users';
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
@@ -341,6 +342,7 @@ export default function App() {
               {activeTab === 'vip' && <VIPView />}
               {activeTab === 'reports' && <ReportsView />}
               {activeTab === 'settings' && <SettingsView onTabChange={setActiveTab} />}
+              {activeTab === 'users' && <UsersView onTabChange={setActiveTab} />}
               {activeTab === 'payment_methods' && <PaymentMethodsView />}
               {activeTab === 'expense_categories' && <ExpenseCategoriesView />}
               
@@ -3272,6 +3274,168 @@ function ServicesView() {
   );
 }
 
+function UsersView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password.length < 6) {
+      setMessage({ type: 'error', text: 'La contraseña debe tener al menos 6 caracteres' });
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      // Usamos una instancia temporal de Supabase para no cerrar la sesión actual del administrador
+      const { createClient } = await import('@supabase/supabase-js');
+      const tempSupabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        { auth: { persistSession: false } }
+      );
+
+      const { error } = await tempSupabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            role: 'admin' // Opcional: puedes definir roles si tu DB lo soporta
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      setMessage({ 
+        type: 'success', 
+        text: 'Usuario creado correctamente. Se ha enviado un correo de confirmación (si está habilitado en Supabase).' 
+      });
+      setEmail('');
+      setPassword('');
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Error al crear usuario' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => onTabChange('settings')}
+            className="p-2 hover:bg-white/5 rounded-xl transition-colors text-zinc-400 hover:text-white"
+          >
+            <ChevronRight className="w-6 h-6 rotate-180" />
+          </button>
+          <div>
+            <h2 className="text-2xl font-black text-white tracking-tight uppercase italic">Gestión de Usuarios</h2>
+            <p className="text-sm text-zinc-500 font-medium">Crea nuevos accesos para administradores o personal</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="card p-8">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="p-3 bg-blue-500/10 rounded-xl text-blue-500">
+              <Plus className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-white tracking-tight">Crear Nuevo Usuario</h3>
+              <p className="text-sm text-zinc-500 font-medium">Registra un nuevo correo y contraseña</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleCreateUser} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Correo Electrónico</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <input 
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-zinc-900/50 border border-white/5 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-blue-500/50 transition-all font-medium"
+                  placeholder="usuario@druppy.com"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Contraseña Temporal</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <input 
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-zinc-900/50 border border-white/5 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-blue-500/50 transition-all font-medium"
+                  placeholder="Mínimo 6 caracteres"
+                  required
+                />
+              </div>
+            </div>
+
+            {message && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={cn(
+                  "p-4 rounded-2xl text-sm font-bold flex items-center gap-3",
+                  message.type === 'success' ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" : "bg-red-500/10 text-red-500 border border-red-500/20"
+                )}
+              >
+                {message.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+                <p>{message.text}</p>
+              </motion.div>
+            )}
+
+            <button 
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white font-black py-4 rounded-2xl shadow-lg shadow-blue-600/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 uppercase tracking-widest"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Registrar Usuario'}
+            </button>
+          </form>
+        </div>
+
+        <div className="card p-8 bg-zinc-900/30">
+          <h3 className="text-lg font-black text-white tracking-tight mb-4 uppercase italic">Información Importante</h3>
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold text-xs shrink-0">1</div>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                El nuevo usuario recibirá un correo de confirmación si tienes habilitada la opción en Supabase.
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold text-xs shrink-0">2</div>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                Una vez creado, el usuario podrá iniciar sesión con su correo y la contraseña que le asignaste.
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold text-xs shrink-0">3</div>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                Este proceso no cerrará tu sesión actual de administrador.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SettingsView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -3314,6 +3478,7 @@ function SettingsView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
     { id: 'payment_methods', label: 'Métodos de Pago', icon: CreditCard, desc: 'Configurar formas de cobro', glow: 'purple' },
     { id: 'expense_categories', label: 'Categorías de Gastos', icon: Tag, desc: 'Organizar tipos de egresos', glow: 'red' },
     { id: 'reports', label: 'Reportes PDF', icon: FileText, desc: 'Generar reportes detallados', glow: 'emerald' },
+    { id: 'users', label: 'Usuarios', icon: Users, desc: 'Gestionar accesos al panel', glow: 'blue' },
   ];
 
   return (
