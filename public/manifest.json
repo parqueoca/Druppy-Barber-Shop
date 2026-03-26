@@ -1,6 +1,6 @@
 {
   "name": "Druppy Barber Shop",
-  "short_name": "Druppy",
+  "short_name": "Druppy Barber Shop",
   "description": "Sistema de gestión profesional para Druppy Barber Shop.",
   "start_url": "/",
   "display": "standalone",
@@ -19,4 +19,3 @@
     }
   ]
 }
-
