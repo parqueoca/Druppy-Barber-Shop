@@ -1,1 +1,22 @@
+{
+  "name": "Druppy Barber Shop",
+  "short_name": "Druppy",
+  "description": "Sistema de gestión profesional para Druppy Barber Shop.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1c20",
+  "theme_color": "#dc2626",
+  "icons": [
+    {
+      "src": "/logodruppy.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logodruppy.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
 
