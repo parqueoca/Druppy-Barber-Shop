@@ -137,11 +137,11 @@ export default function App() {
         )}
       >
         <div className="flex flex-col items-center gap-4 mb-10 text-center">
-          <div className="w-24 h-24 flex items-center justify-center overflow-hidden transition-all duration-300">
+          <div className="w-32 h-32 flex items-center justify-center transition-all duration-300">
             <img 
               src="/logodruppy.png" 
               alt="Logo" 
-              className="w-full h-full object-contain scale-125" 
+              className="w-full h-full object-contain" 
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 const parent = e.currentTarget.parentElement;
@@ -153,7 +153,7 @@ export default function App() {
               }}
             />
           </div>
-          <h1 className="text-xl font-black tracking-tighter leading-none uppercase italic text-white">
+          <h1 className="text-lg font-black tracking-tighter leading-none uppercase italic text-white whitespace-nowrap">
             DRUPPY BARBER <span className="text-red-500 not-italic">SHOP</span>
           </h1>
         </div>
@@ -196,11 +196,11 @@ export default function App() {
       {/* Mobile Header */}
       <header className="fixed top-0 left-0 right-0 z-50 h-28 bg-[#1a1c20] border-b border-white/5 flex items-center justify-between px-5 flex-shrink-0 lg:hidden shadow-xl">
         <div className="flex items-center gap-4">
-          <div className="w-20 h-20 flex items-center justify-center overflow-hidden transition-all duration-300">
+          <div className="w-24 h-24 flex items-center justify-center transition-all duration-300">
             <img 
               src="/logodruppy.png" 
               alt="Logo" 
-              className="w-full h-full object-contain scale-125"
+              className="w-full h-full object-contain"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 const parent = e.currentTarget.parentElement;
@@ -212,7 +212,7 @@ export default function App() {
               }}
             />
           </div>
-          <h1 className="text-lg font-black tracking-tighter leading-none uppercase italic text-white">
+          <h1 className="text-base font-black tracking-tighter leading-none uppercase italic text-white whitespace-nowrap">
             DRUPPY BARBER <span className="text-red-500 not-italic">SHOP</span>
           </h1>
         </div>
