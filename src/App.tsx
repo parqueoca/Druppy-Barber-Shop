@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import Login from './components/Login';
 import { 
   Users, 
   Calendar, 
@@ -35,7 +36,8 @@ import {
   Tag,
   Star,
   Trophy,
-  FileText
+  FileText,
+  Loader2
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -101,12 +103,27 @@ const getBase64ImageFromUrl = async (url: string): Promise<string> => {
 type Tab = 'dashboard' | 'appointments' | 'clients' | 'services' | 'barbers' | 'sales' | 'finance' | 'settings' | 'payment_methods' | 'expense_categories' | 'vip' | 'reports';
 
 export default function App() {
+  const [session, setSession] = useState<any>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [preselectedClientId, setPreselectedClientId] = useState<string | null>(null);
   const [preselectedAppointmentId, setPreselectedAppointmentId] = useState<string | null>(null);
   const [preselectedSaleId, setPreselectedSaleId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -127,6 +144,18 @@ export default function App() {
   ];
 
   const moreItems: any[] = [];
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Login />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row font-sans transition-colors duration-300 overflow-hidden">
@@ -3236,6 +3265,40 @@ function ServicesView() {
 }
 
 function SettingsView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: 'error', text: 'Las contraseñas no coinciden' });
+      return;
+    }
+    if (newPassword.length < 6) {
+      setMessage({ type: 'error', text: 'La contraseña debe tener al menos 6 caracteres' });
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setMessage({ type: 'success', text: 'Contraseña actualizada correctamente' });
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => setIsChangingPassword(false), 2000);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Error al actualizar contraseña' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const configOptions = [
     { id: 'appointments', label: 'Agenda', icon: Calendar, desc: 'Gestionar citas y horarios', glow: 'blue' },
     { id: 'barbers', label: 'Barberos', icon: UserRound, desc: 'Administrar equipo de trabajo', glow: 'orange' },
@@ -3276,6 +3339,95 @@ function SettingsView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
             <p className="text-xs text-zinc-500 font-medium">{opt.desc}</p>
           </button>
         ))}
+      </div>
+
+      {/* Security Section */}
+      <div className="card p-8">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="p-3 bg-red-500/10 rounded-xl text-red-500">
+            <Lock className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-xl font-black text-white tracking-tight">Seguridad</h3>
+            <p className="text-sm text-zinc-500 font-medium">Gestiona el acceso a tu cuenta de administrador</p>
+          </div>
+        </div>
+
+        {!isChangingPassword ? (
+          <button 
+            onClick={() => setIsChangingPassword(true)}
+            className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all border border-white/5"
+          >
+            Cambiar Contraseña
+          </button>
+        ) : (
+          <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Nueva Contraseña</label>
+              <input 
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full bg-zinc-900/50 border border-white/5 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-red-500/50 transition-all"
+                placeholder="Mínimo 6 caracteres"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Confirmar Contraseña</label>
+              <input 
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full bg-zinc-900/50 border border-white/5 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-red-500/50 transition-all"
+                placeholder="Repite la contraseña"
+                required
+              />
+            </div>
+
+            {message && (
+              <div className={cn(
+                "p-4 rounded-xl text-sm font-bold flex items-center gap-2",
+                message.type === 'success' ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" : "bg-red-500/10 text-red-500 border border-red-500/20"
+              )}>
+                {message.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                {message.text}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button 
+                type="submit"
+                disabled={loading}
+                className="px-6 py-3 bg-red-600 hover:bg-red-500 disabled:bg-red-600/50 text-white rounded-xl font-bold transition-all flex items-center gap-2"
+              >
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                Guardar Cambios
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  setIsChangingPassword(false);
+                  setMessage(null);
+                }}
+                className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* Logout Section */}
+      <div className="pt-4">
+        <button 
+          onClick={() => supabase.auth.signOut()}
+          className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-2xl font-black transition-all border border-red-500/20 uppercase tracking-widest"
+        >
+          <LogOut className="w-5 h-5" />
+          Cerrar Sesión Segura
+        </button>
       </div>
     </div>
   );
