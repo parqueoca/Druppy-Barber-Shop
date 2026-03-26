@@ -122,7 +122,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-zinc-600 text-xs mt-8 font-medium">
-          &copy; 2026 Druppy Barber Shop. Todos los derechos reservados.
+          &copy; 2026 Druppy Barber Shop. Todos los derechos reservados. App Creada por Juan Ramon Esteba.
         </p>
       </motion.div>
     </div>
