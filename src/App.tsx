@@ -113,6 +113,7 @@ export default function App() {
   const [preselectedClientId, setPreselectedClientId] = useState<string | null>(null);
   const [preselectedAppointmentId, setPreselectedAppointmentId] = useState<string | null>(null);
   const [preselectedSaleId, setPreselectedSaleId] = useState<string | null>(null);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession()
@@ -341,7 +342,7 @@ export default function App() {
               {activeTab === 'finance' && <FinanceView />}
               {activeTab === 'vip' && <VIPView />}
               {activeTab === 'reports' && <ReportsView />}
-              {activeTab === 'settings' && <SettingsView onTabChange={setActiveTab} session={session} />}
+              {activeTab === 'settings' && <SettingsView onTabChange={setActiveTab} session={session} onLogoutRequest={() => setIsLogoutConfirmOpen(true)} />}
               {activeTab === 'users' && <UsersView onTabChange={setActiveTab} session={session} />}
               {activeTab === 'payment_methods' && <PaymentMethodsView />}
               {activeTab === 'expense_categories' && <ExpenseCategoriesView />}
@@ -364,7 +365,7 @@ export default function App() {
                     </button>
                   ))}
                   <button 
-                    onClick={() => supabase.auth.signOut()}
+                    onClick={() => setIsLogoutConfirmOpen(true)}
                     className="flex items-center gap-4 p-5 text-red-500 font-black tracking-tight hover:bg-red-500/5 rounded-2xl transition-all"
                   >
                     <LogOut className="w-6 h-6" />
@@ -376,6 +377,43 @@ export default function App() {
           </AnimatePresence>
         </div>
       </main>
+
+      {/* Logout Confirmation Modal */}
+      <AnimatePresence>
+        {isLogoutConfirmOpen && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="card p-8 shadow-2xl max-w-sm w-full text-center"
+            >
+              <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <LogOut className="w-10 h-10" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">¿Cerrar Sesión?</h3>
+              <p className="text-zinc-500 mb-8">¿Estás seguro de que deseas salir de la aplicación?</p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setIsLogoutConfirmOpen(false)}
+                  className="flex-1 py-3 bg-zinc-800 text-white rounded-xl font-bold hover:bg-zinc-700 transition-all border border-white/5"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={() => {
+                    setIsLogoutConfirmOpen(false);
+                    supabase.auth.signOut();
+                  }}
+                  className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-600/20"
+                >
+                  Salir
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -3481,7 +3519,7 @@ function UsersView({ onTabChange, session }: { onTabChange: (tab: Tab) => void, 
 }
 
 
-function SettingsView({ onTabChange, session }: { onTabChange: (tab: Tab) => void, session: any }) {
+function SettingsView({ onTabChange, session, onLogoutRequest }: { onTabChange: (tab: Tab) => void, session: any, onLogoutRequest?: () => void }) {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isManagingUsers, setIsManagingUsers] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -3843,7 +3881,7 @@ function SettingsView({ onTabChange, session }: { onTabChange: (tab: Tab) => voi
       {/* Logout Section */}
       <div className="pt-4">
         <button 
-          onClick={() => supabase.auth.signOut()}
+          onClick={() => onLogoutRequest ? onLogoutRequest() : supabase.auth.signOut()}
           className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-2xl font-black transition-all border border-red-500/20 uppercase tracking-widest"
         >
           <LogOut className="w-5 h-5" />
