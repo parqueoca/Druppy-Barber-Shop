@@ -341,8 +341,8 @@ export default function App() {
               {activeTab === 'finance' && <FinanceView />}
               {activeTab === 'vip' && <VIPView />}
               {activeTab === 'reports' && <ReportsView />}
-              {activeTab === 'settings' && <SettingsView onTabChange={setActiveTab} />}
-              {activeTab === 'users' && <UsersView onTabChange={setActiveTab} />}
+              {activeTab === 'settings' && <SettingsView onTabChange={setActiveTab} session={session} />}
+              {activeTab === 'users' && <UsersView onTabChange={setActiveTab} session={session} />}
               {activeTab === 'payment_methods' && <PaymentMethodsView />}
               {activeTab === 'expense_categories' && <ExpenseCategoriesView />}
               
@@ -3274,11 +3274,46 @@ function ServicesView() {
   );
 }
 
-function UsersView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
+function UsersView({ onTabChange, session }: { onTabChange: (tab: Tab) => void, session: any }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    fetchRegisteredUsers();
+  }, []);
+
+  async function fetchRegisteredUsers() {
+    setLoadingUsers(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (usersError) throw usersError;
+        setRegisteredUsers(usersData || []);
+      } else {
+        setRegisteredUsers(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      if (session?.user) {
+        setRegisteredUsers([{ id: session.user.id, email: session.user.email, created_at: session.user.created_at }]);
+      }
+    } finally {
+      setLoadingUsers(false);
+    }
+  }
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -3291,7 +3326,6 @@ function UsersView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
     setMessage(null);
 
     try {
-      // Usamos una instancia temporal de Supabase para no cerrar la sesión actual del administrador
       const { createClient } = await import('@supabase/supabase-js');
       const tempSupabase = createClient(
         import.meta.env.VITE_SUPABASE_URL,
@@ -3299,24 +3333,26 @@ function UsersView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
         { auth: { persistSession: false } }
       );
 
-      const { error } = await tempSupabase.auth.signUp({
+      const { data, error } = await tempSupabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            role: 'admin' // Opcional: puedes definir roles si tu DB lo soporta
-          }
-        }
       });
 
       if (error) throw error;
 
+      if (data.user) {
+        await supabase.from('profiles').insert([
+          { id: data.user.id, email: data.user.email, role: 'admin' }
+        ]).select();
+      }
+
       setMessage({ 
         type: 'success', 
-        text: 'Usuario creado correctamente. Se ha enviado un correo de confirmación (si está habilitado en Supabase).' 
+        text: 'Usuario creado correctamente. Se ha enviado un correo de confirmación.' 
       });
       setEmail('');
       setPassword('');
+      fetchRegisteredUsers();
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Error al crear usuario' });
     } finally {
@@ -3408,27 +3444,35 @@ function UsersView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
           </form>
         </div>
 
-        <div className="card p-8 bg-zinc-900/30">
-          <h3 className="text-lg font-black text-white tracking-tight mb-4 uppercase italic">Información Importante</h3>
-          <div className="space-y-4">
-            <div className="flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold text-xs shrink-0">1</div>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                El nuevo usuario recibirá un correo de confirmación si tienes habilitada la opción en Supabase.
-              </p>
-            </div>
-            <div className="flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold text-xs shrink-0">2</div>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                Una vez creado, el usuario podrá iniciar sesión con su correo y la contraseña que le asignaste.
-              </p>
-            </div>
-            <div className="flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold text-xs shrink-0">3</div>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                Este proceso no cerrará tu sesión actual de administrador.
-              </p>
-            </div>
+        <div className="card p-8 bg-zinc-900/30 flex flex-col">
+          <h3 className="text-lg font-black text-white tracking-tight mb-4 uppercase italic">Usuarios Registrados</h3>
+          <div className="flex-1 overflow-y-auto space-y-3">
+            {loadingUsers ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+              </div>
+            ) : registeredUsers.length === 0 ? (
+              <p className="text-center text-zinc-500 py-10 italic">No hay usuarios registrados</p>
+            ) : (
+              registeredUsers.map((u) => (
+                <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group hover:border-white/10 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
+                      <UserRound className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">{u.email}</p>
+                      <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
+                        {u.role || 'Administrador'} • {u.created_at ? format(new Date(u.created_at), 'dd MMM yyyy', { locale: es }) : 'Activo'}
+                      </p>
+                    </div>
+                  </div>
+                  {session?.user?.id === u.id && (
+                    <span className="text-[8px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20 font-black uppercase tracking-tighter">Tú</span>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -3436,12 +3480,58 @@ function UsersView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
   );
 }
 
-function SettingsView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
+
+function SettingsView({ onTabChange, session }: { onTabChange: (tab: Tab) => void, session: any }) {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isManagingUsers, setIsManagingUsers] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // User creation state (moved from UsersView)
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+
+  useEffect(() => {
+    if (isManagingUsers) {
+      fetchRegisteredUsers();
+    }
+  }, [isManagingUsers]);
+
+  async function fetchRegisteredUsers() {
+    setLoadingUsers(true);
+    try {
+      // Intentamos obtener de la tabla 'profiles' que suele ser la que guarda info pública de auth.users
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        // Si falla 'profiles', intentamos 'users' por si acaso
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (usersError) throw usersError;
+        setRegisteredUsers(usersData || []);
+      } else {
+        setRegisteredUsers(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      // Si falla todo, al menos mostramos el usuario actual si está disponible
+      if (session?.user) {
+        setRegisteredUsers([{ id: session.user.id, email: session.user.email, created_at: session.user.created_at }]);
+      }
+    } finally {
+      setLoadingUsers(false);
+    }
+  }
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -3471,6 +3561,52 @@ function SettingsView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
     }
   };
 
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newUserPassword.length < 6) {
+      setMessage({ type: 'error', text: 'La contraseña debe tener al menos 6 caracteres' });
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const tempSupabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        { auth: { persistSession: false } }
+      );
+
+      const { data, error } = await tempSupabase.auth.signUp({
+        email: newUserEmail,
+        password: newUserPassword,
+      });
+
+      if (error) throw error;
+
+      // Si se creó correctamente, intentamos insertarlo en profiles si existe
+      if (data.user) {
+        await supabase.from('profiles').insert([
+          { id: data.user.id, email: data.user.email, role: 'admin' }
+        ]).select();
+      }
+
+      setMessage({ 
+        type: 'success', 
+        text: 'Usuario creado correctamente. Se ha enviado un correo de confirmación.' 
+      });
+      setNewUserEmail('');
+      setNewUserPassword('');
+      fetchRegisteredUsers();
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Error al crear usuario' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const configOptions = [
     { id: 'appointments', label: 'Agenda', icon: Calendar, desc: 'Gestionar citas y horarios', glow: 'blue' },
     { id: 'barbers', label: 'Barberos', icon: UserRound, desc: 'Administrar equipo de trabajo', glow: 'orange' },
@@ -3478,13 +3614,12 @@ function SettingsView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
     { id: 'payment_methods', label: 'Métodos de Pago', icon: CreditCard, desc: 'Configurar formas de cobro', glow: 'purple' },
     { id: 'expense_categories', label: 'Categorías de Gastos', icon: Tag, desc: 'Organizar tipos de egresos', glow: 'red' },
     { id: 'reports', label: 'Reportes PDF', icon: FileText, desc: 'Generar reportes detallados', glow: 'emerald' },
-    { id: 'users', label: 'Usuarios', icon: Users, desc: 'Gestionar accesos al panel', glow: 'blue' },
   ];
 
   return (
     <div className="space-y-8">
       {/* Config Sections Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {configOptions.map((opt) => (
           <button
             key={opt.id}
@@ -3516,79 +3651,192 @@ function SettingsView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
 
       {/* Security Section */}
       <div className="card p-8">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 bg-red-500/10 rounded-xl text-red-500">
-            <Lock className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-xl font-black text-white tracking-tight">Seguridad</h3>
-            <p className="text-sm text-zinc-500 font-medium">Gestiona el acceso a tu cuenta de administrador</p>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-red-500/10 rounded-xl text-red-500">
+              <Lock className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-white tracking-tight">Seguridad y Usuarios</h3>
+              <p className="text-sm text-zinc-500 font-medium">Gestiona el acceso y los usuarios del sistema</p>
+            </div>
           </div>
         </div>
 
-        {!isChangingPassword ? (
-          <button 
-            onClick={() => setIsChangingPassword(true)}
-            className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all border border-white/5"
-          >
-            Cambiar Contraseña
-          </button>
-        ) : (
-          <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Nueva Contraseña</label>
-              <input 
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full bg-zinc-900/50 border border-white/5 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-red-500/50 transition-all"
-                placeholder="Mínimo 6 caracteres"
-                required
-              />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Change Password */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 text-white font-bold uppercase tracking-widest text-xs">
+              <Edit3 className="w-4 h-4 text-red-500" />
+              <span>Mi Cuenta</span>
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Confirmar Contraseña</label>
-              <input 
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full bg-zinc-900/50 border border-white/5 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-red-500/50 transition-all"
-                placeholder="Repite la contraseña"
-                required
-              />
-            </div>
+            
+            {!isChangingPassword ? (
+              <button 
+                onClick={() => setIsChangingPassword(true)}
+                className="w-full px-6 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-bold transition-all border border-white/5 flex items-center justify-between group"
+              >
+                <span>Cambiar mi contraseña</span>
+                <ChevronRight className="w-5 h-5 text-zinc-500 group-hover:text-white transition-all" />
+              </button>
+            ) : (
+              <form onSubmit={handlePasswordChange} className="space-y-4 bg-white/5 p-6 rounded-2xl border border-white/5">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Nueva Contraseña</label>
+                  <input 
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full bg-zinc-900/50 border border-white/5 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-red-500/50 transition-all"
+                    placeholder="Mínimo 6 caracteres"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Confirmar Contraseña</label>
+                  <input 
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full bg-zinc-900/50 border border-white/5 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-red-500/50 transition-all"
+                    placeholder="Repite la contraseña"
+                    required
+                  />
+                </div>
 
-            {message && (
-              <div className={cn(
-                "p-4 rounded-xl text-sm font-bold flex items-center gap-2",
-                message.type === 'success' ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" : "bg-red-500/10 text-red-500 border border-red-500/20"
-              )}>
-                {message.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                {message.text}
-              </div>
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 disabled:bg-red-600/50 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                  >
+                    {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Guardar
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setIsChangingPassword(false);
+                      setMessage(null);
+                    }}
+                    className="px-4 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
             )}
+          </div>
 
-            <div className="flex gap-3 pt-2">
+          {/* User Management */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-white font-bold uppercase tracking-widest text-xs">
+                <Users className="w-4 h-4 text-blue-500" />
+                <span>Usuarios del Sistema</span>
+              </div>
               <button 
-                type="submit"
-                disabled={loading}
-                className="px-6 py-3 bg-red-600 hover:bg-red-500 disabled:bg-red-600/50 text-white rounded-xl font-bold transition-all flex items-center gap-2"
+                onClick={() => setIsManagingUsers(!isManagingUsers)}
+                className="text-[10px] font-bold text-blue-500 hover:text-blue-400 uppercase tracking-widest"
               >
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Guardar Cambios
-              </button>
-              <button 
-                type="button"
-                onClick={() => {
-                  setIsChangingPassword(false);
-                  setMessage(null);
-                }}
-                className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all"
-              >
-                Cancelar
+                {isManagingUsers ? 'Cerrar Lista' : 'Ver Usuarios'}
               </button>
             </div>
-          </form>
+
+            {isManagingUsers ? (
+              <div className="space-y-4">
+                {/* User List */}
+                <div className="bg-white/5 rounded-2xl border border-white/5 overflow-hidden">
+                  <div className="p-4 border-b border-white/5 bg-white/5">
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Correos Registrados</p>
+                  </div>
+                  <div className="max-h-[200px] overflow-y-auto">
+                    {loadingUsers ? (
+                      <div className="p-8 text-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-blue-500 mx-auto" />
+                      </div>
+                    ) : registeredUsers.length === 0 ? (
+                      <div className="p-8 text-center text-zinc-500 text-sm italic">No se encontraron usuarios</div>
+                    ) : (
+                      registeredUsers.map((u) => (
+                        <div key={u.id} className="p-4 border-b border-white/5 last:border-0 flex items-center justify-between group hover:bg-white/5 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
+                              <UserRound className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">{u.email}</p>
+                              <p className="text-[10px] text-zinc-500 uppercase tracking-tighter">
+                                {u.role || 'Administrador'} • {u.created_at ? format(new Date(u.created_at), 'dd/MM/yyyy') : 'Activo'}
+                              </p>
+                            </div>
+                          </div>
+                          {supabase.auth.getUser().then(({ data: { user } }) => user?.id === u.id) && (
+                            <span className="text-[8px] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded-full border border-emerald-500/20 font-bold uppercase">Tú</span>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Add User Form */}
+                <div className="bg-blue-500/5 p-6 rounded-2xl border border-blue-500/10 space-y-4">
+                  <p className="text-xs font-bold text-blue-400 uppercase tracking-widest">Registrar Nuevo Usuario</p>
+                  <form onSubmit={handleCreateUser} className="space-y-3">
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                      <input 
+                        type="email"
+                        value={newUserEmail}
+                        onChange={(e) => setNewUserEmail(e.target.value)}
+                        className="w-full bg-zinc-900/50 border border-white/5 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all"
+                        placeholder="correo@ejemplo.com"
+                        required
+                      />
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                      <input 
+                        type="password"
+                        value={newUserPassword}
+                        onChange={(e) => setNewUserPassword(e.target.value)}
+                        className="w-full bg-zinc-900/50 border border-white/5 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all"
+                        placeholder="Contraseña temporal"
+                        required
+                      />
+                    </div>
+                    <button 
+                      type="submit"
+                      disabled={loading}
+                      className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
+                    >
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                      Crear Usuario
+                    </button>
+                  </form>
+                </div>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setIsManagingUsers(true)}
+                className="w-full px-6 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-bold transition-all border border-white/5 flex items-center justify-between group"
+              >
+                <span>Administrar accesos</span>
+                <ChevronRight className="w-5 h-5 text-zinc-500 group-hover:text-white transition-all" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {message && (
+          <div className={cn(
+            "mt-6 p-4 rounded-2xl text-sm font-bold flex items-center gap-3",
+            message.type === 'success' ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" : "bg-red-500/10 text-red-500 border border-red-500/20"
+          )}>
+            {message.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+            <p>{message.text}</p>
+          </div>
         )}
       </div>
 
@@ -3605,6 +3853,7 @@ function SettingsView({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
     </div>
   );
 }
+
 
 function PaymentMethodsView() {
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
