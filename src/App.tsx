@@ -40,7 +40,7 @@ import {
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { motion, AnimatePresence } from 'motion/react';
-import { format, startOfDay, endOfDay, isSameDay, differenceInMinutes, differenceInSeconds, addMinutes, subMinutes, isAfter, isBefore, addDays } from 'date-fns';
+import { format, startOfDay, endOfDay, isSameDay, differenceInMinutes, differenceInSeconds, differenceInDays, differenceInCalendarDays, addMinutes, subMinutes, isAfter, isBefore, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
   BarChart, 
@@ -106,6 +106,7 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [preselectedClientId, setPreselectedClientId] = useState<string | null>(null);
   const [preselectedAppointmentId, setPreselectedAppointmentId] = useState<string | null>(null);
+  const [preselectedSaleId, setPreselectedSaleId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -267,6 +268,10 @@ export default function App() {
                     setPreselectedAppointmentId(id);
                     setActiveTab('appointments');
                   }}
+                  onPreselectSale={(id) => {
+                    setPreselectedSaleId(id);
+                    setActiveTab('sales');
+                  }}
                 />
               )}
               {activeTab === 'appointments' && (
@@ -277,11 +282,20 @@ export default function App() {
                   onClearPreselectAppointment={() => setPreselectedAppointmentId(null)}
                 />
               )}
-              {activeTab === 'sales' && <SalesView />}
+              {activeTab === 'sales' && (
+                <SalesView 
+                  initialSaleId={preselectedSaleId} 
+                  onClearPreselect={() => setPreselectedSaleId(null)} 
+                />
+              )}
               {activeTab === 'clients' && (
                 <ClientsView 
                   onTabChange={setActiveTab} 
                   onPreselectClient={setPreselectedClientId} 
+                  onPreselectSale={(id) => {
+                    setPreselectedSaleId(id);
+                    setActiveTab('sales');
+                  }}
                 />
               )}
               {activeTab === 'barbers' && <BarbersView />}
@@ -328,9 +342,10 @@ export default function App() {
 }
 
 // --- Views ---
-function DashboardView({ onTabChange, onPreselectAppointment }: { 
+function DashboardView({ onTabChange, onPreselectAppointment, onPreselectSale }: { 
   onTabChange: (tab: Tab) => void,
-  onPreselectAppointment?: (id: string) => void
+  onPreselectAppointment?: (id: string) => void,
+  onPreselectSale?: (id: string) => void
 }) {
   const [todaySales, setTodaySales] = useState<any[]>([]);
   const [todayPayments, setTodayPayments] = useState<any[]>([]);
@@ -485,7 +500,7 @@ function DashboardView({ onTabChange, onPreselectAppointment }: {
                       <div className="text-right">
                         <p className="text-sm font-black text-orange-500">RD$ {credit.total_amount.toLocaleString()}</p>
                         <button 
-                          onClick={() => onTabChange('sales')}
+                          onClick={() => onPreselectSale?.(credit.id)}
                           className="text-[10px] font-bold text-blue-400 hover:underline"
                         >
                           Ver detalles
@@ -1539,7 +1554,10 @@ function AppointmentsView({
   );
 }
 
-function SalesView() {
+function SalesView({ initialSaleId, onClearPreselect }: { 
+  initialSaleId?: string | null,
+  onClearPreselect?: () => void
+}) {
   const [isAddingSale, setIsAddingSale] = useState(false);
   const [isEditingSale, setIsEditingSale] = useState(false);
   const [isAddingPayment, setIsAddingPayment] = useState(false);
@@ -1553,6 +1571,14 @@ function SalesView() {
   const [clients, setClients] = useState<any[]>([]);
   const [servicesList, setServicesList] = useState<any[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    if (initialSaleId) {
+      setSearchTerm(initialSaleId);
+      onClearPreselect?.();
+    }
+  }, [initialSaleId]);
 
   const [newSale, setNewSale] = useState({
     client_id: '',
@@ -1562,6 +1588,7 @@ function SalesView() {
     payment_method: '',
     note: '',
     due_date: '',
+    created_at: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
     commission_rate: 100 // Default 100%
   });
 
@@ -1614,7 +1641,8 @@ function SalesView() {
         ...newSale,
         commission_rate: newSale.commission_rate / 100,
         is_paid: newSale.payment_method !== 'Crédito',
-        paid_amount: newSale.payment_method !== 'Crédito' ? newSale.total_amount : 0
+        paid_amount: newSale.payment_method !== 'Crédito' ? newSale.total_amount : 0,
+        created_at: new Date(newSale.created_at).toISOString()
       };
       if (user) saleData.user_id = user.id;
 
@@ -1637,6 +1665,7 @@ function SalesView() {
         payment_method: defaultMethod,
         note: '',
         due_date: '',
+        created_at: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
         commission_rate: 100
       });
       fetchData();
@@ -1651,7 +1680,8 @@ function SalesView() {
     try {
       const updateData: any = {
         ...editingSale,
-        commission_rate: editingSale.commission_rate > 1 ? editingSale.commission_rate / 100 : editingSale.commission_rate
+        commission_rate: editingSale.commission_rate > 1 ? editingSale.commission_rate / 100 : editingSale.commission_rate,
+        created_at: new Date(editingSale.created_at).toISOString()
       };
       
       // Remove joined data
@@ -1743,6 +1773,18 @@ function SalesView() {
 
   const maxServiceCount = topServices.length > 0 ? topServices[0].count : 1;
   const serviceColors = ['bg-emerald-500', 'bg-blue-500', 'bg-orange-500', 'bg-purple-500', 'bg-pink-500'];
+
+  const filteredSales = useMemo(() => {
+    if (!searchTerm) return sales;
+    const term = searchTerm.toLowerCase();
+    return sales.filter(sale => 
+      sale.id.toLowerCase().includes(term) ||
+      (sale.clients?.name || 'Cliente ocasional').toLowerCase().includes(term) ||
+      (sale.barbers?.name || '').toLowerCase().includes(term) ||
+      (sale.services || '').toLowerCase().includes(term) ||
+      (sale.payment_method || '').toLowerCase().includes(term)
+    );
+  }, [sales, searchTerm]);
 
   return (
     <div className="space-y-8">
@@ -1849,6 +1891,16 @@ function SalesView() {
               </div>
             )}
             <div className="space-y-1">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Fecha de Venta</label>
+              <input 
+                required
+                type="datetime-local" 
+                value={newSale.created_at}
+                onChange={e => setNewSale({...newSale, created_at: e.target.value})}
+                className="w-full bg-[var(--bg-input)] border-none rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none glass"
+              />
+            </div>
+            <div className="space-y-1">
               <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Nota / Referencia</label>
               <input 
                 type="text" 
@@ -1898,6 +1950,16 @@ function SalesView() {
                   value={editingSale.commission_rate * (editingSale.commission_rate <= 1 ? 100 : 1)}
                   onChange={e => setEditingSale({...editingSale, commission_rate: parseInt(e.target.value) || 0})}
                   className="w-full bg-[var(--bg-input)] border-none rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Fecha de Venta</label>
+                <input 
+                  required
+                  type="datetime-local" 
+                  value={editingSale.created_at}
+                  onChange={e => setEditingSale({...editingSale, created_at: e.target.value})}
+                  className="w-full bg-[var(--bg-input)] border-none rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none glass"
                 />
               </div>
               <div className="space-y-1 sm:col-span-2">
@@ -2027,8 +2089,18 @@ function SalesView() {
       </div>
 
       <div className="card overflow-hidden">
-        <div className="p-6 border-b border-white/5">
+        <div className="p-6 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h4 className="font-black text-white tracking-tight">Ventas Recientes</h4>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+            <input 
+              type="text" 
+              placeholder="Buscar venta..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="bg-[var(--bg-input)] border-none rounded-xl pl-11 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full glass"
+            />
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -2047,7 +2119,7 @@ function SalesView() {
                 <tr>
                   <td colSpan={6} className="px-6 py-10 text-center text-zinc-500 font-medium">Cargando ventas...</td>
                 </tr>
-              ) : sales.length > 0 ? sales.map((sale) => (
+              ) : filteredSales.length > 0 ? filteredSales.map((sale) => (
                 <tr key={sale.id} className="hover:bg-white/5 transition-colors group">
                   <td className="px-6 py-4">
                     <p className="text-sm font-bold text-zinc-200">{sale.clients?.name || 'Cliente ocasional'}</p>
@@ -2107,7 +2179,10 @@ function SalesView() {
                       )}
                       <button 
                         onClick={() => {
-                          setEditingSale(sale);
+                          setEditingSale({
+                            ...sale,
+                            created_at: format(new Date(sale.created_at), "yyyy-MM-dd'T'HH:mm")
+                          });
                           setIsEditingSale(true);
                         }}
                         className="p-2 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white rounded-lg transition-all"
@@ -2139,7 +2214,11 @@ function SalesView() {
   );
 }
 
-function ClientsView({ onTabChange, onPreselectClient }: { onTabChange: (tab: Tab) => void, onPreselectClient: (id: string) => void }) {
+function ClientsView({ onTabChange, onPreselectClient, onPreselectSale }: { 
+  onTabChange: (tab: Tab) => void, 
+  onPreselectClient: (id: string) => void,
+  onPreselectSale: (id: string) => void
+}) {
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [isAddingClient, setIsAddingClient] = useState(false);
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
@@ -2176,6 +2255,10 @@ function ClientsView({ onTabChange, onPreselectClient }: { onTabChange: (tab: Ta
   const lastVisit = useMemo(() => {
     if (visitHistory.length === 0) return 'N/A';
     return format(new Date(visitHistory[0].created_at), "dd MMM yyyy", { locale: es });
+  }, [visitHistory]);
+
+  const pendingClientCredits = useMemo(() => {
+    return visitHistory.filter(sale => !sale.is_paid && sale.payment_method === 'Crédito');
   }, [visitHistory]);
 
   async function fetchVisitHistory(clientId: string) {
@@ -2446,6 +2529,36 @@ function ClientsView({ onTabChange, onPreselectClient }: { onTabChange: (tab: Ta
               </div>
             </div>
 
+            {pendingClientCredits.length > 0 && (
+              <div className="card overflow-hidden border-l-4 border-orange-500">
+                <div className="p-6 border-b border-white/5 bg-orange-500/5 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-orange-500" />
+                  <h4 className="font-bold text-orange-500">Recordatorios de Cobro</h4>
+                </div>
+                <div className="p-6 space-y-4">
+                  {pendingClientCredits.map(credit => (
+                    <div key={credit.id} className="flex items-center justify-between p-4 glass rounded-xl border border-white/5">
+                      <div className="space-y-1">
+                        <p className="text-sm font-bold text-white">Venta del {format(new Date(credit.created_at), "d MMM, yyyy")}</p>
+                        <p className="text-[10px] text-zinc-400 font-medium">
+                          Vence: {credit.due_date ? format(new Date(credit.due_date), "dd 'de' MMMM", { locale: es }) : 'No definida'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-orange-500">RD$ {(credit.total_amount - (credit.paid_amount || 0)).toLocaleString()}</p>
+                        <button 
+                          onClick={() => onPreselectSale(credit.id)}
+                          className="text-[10px] font-bold text-blue-400 hover:underline"
+                        >
+                          Ver detalles
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="card overflow-hidden">
               <div className="p-6 border-b border-white/5">
                 <h4 className="font-bold">Historial de Visitas</h4>
@@ -2458,7 +2571,15 @@ function ClientsView({ onTabChange, onPreselectClient }: { onTabChange: (tab: Ta
                       <p className="text-xs text-zinc-500">{format(new Date(sale.created_at), "d MMM, yyyy")} • RD$ {sale.total_amount.toLocaleString()}</p>
                       {sale.note && <p className="text-[10px] text-zinc-400 italic mt-1">{sale.note}</p>}
                     </div>
-                    <span className="text-[10px] font-bold bg-white/5 text-zinc-400 px-2 py-1 rounded border border-white/5">{sale.payment_method}</span>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="text-[10px] font-bold bg-white/5 text-zinc-400 px-2 py-1 rounded border border-white/5">{sale.payment_method}</span>
+                      <button 
+                        onClick={() => onPreselectSale(sale.id)}
+                        className="text-[10px] font-bold text-blue-400 hover:underline"
+                      >
+                        Ver detalles
+                      </button>
+                    </div>
                   </div>
                 )) : (
                   <p className="text-center py-8 text-zinc-500 text-sm">No hay historial de visitas</p>
@@ -3889,6 +4010,7 @@ function FinanceView() {
 function VIPView() {
   const [vipClients, setVipClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedClientForContact, setSelectedClientForContact] = useState<any>(null);
 
   useEffect(() => {
     fetchVIPData();
@@ -3898,8 +4020,8 @@ function VIPView() {
     try {
       const [clientsRes, appointmentsRes, salesRes] = await Promise.all([
         supabase.from('clients').select('*'),
-        supabase.from('appointments').select('client_id, status'),
-        supabase.from('sales').select('client_id, total_amount')
+        supabase.from('appointments').select('client_id, status, appointment_time'),
+        supabase.from('sales').select('client_id, total_amount, created_at')
       ]);
 
       if (clientsRes.error) throw clientsRes.error;
@@ -3911,9 +4033,31 @@ function VIPView() {
       const sales = salesRes.data || [];
 
       const clientStats = clients.map(client => {
-        const clientVisits = appointments.filter(a => a.client_id === client.id && a.status === 'completed').length;
-        const clientSpending = sales.filter(s => s.client_id === client.id).reduce((acc, s) => acc + s.total_amount, 0);
+        const completedAppointments = appointments.filter(a => a.client_id === client.id && a.status === 'completed');
+        const clientSales = sales.filter(s => s.client_id === client.id);
         
+        // Total visits could be from appointments or direct sales
+        // We'll use the number of sales as the primary visit counter if they exist, 
+        // as every sale represents a visit.
+        const clientVisits = Math.max(completedAppointments.length, clientSales.length);
+        const clientSpending = clientSales.reduce((acc, s) => acc + s.total_amount, 0);
+        
+        // Find last visit from both appointments and sales
+        let lastVisitText = 'Nunca';
+        const dates: number[] = [
+          ...completedAppointments.map(a => new Date(a.appointment_time).getTime()),
+          ...clientSales.map(s => new Date(s.created_at).getTime())
+        ];
+
+        if (dates.length > 0) {
+          const lastVisitDate = new Date(Math.max(...dates));
+          const daysSince = differenceInCalendarDays(new Date(), lastVisitDate);
+          
+          if (daysSince === 0) lastVisitText = 'Hoy';
+          else if (daysSince === 1) lastVisitText = 'Ayer';
+          else lastVisitText = `Hace ${daysSince} días`;
+        }
+
         // Scoring logic: 
         // Visits weight: 10 points per visit
         // Spending weight: 1 point per 100 RD$
@@ -3923,6 +4067,7 @@ function VIPView() {
           ...client,
           visits: clientVisits,
           spending: clientSpending,
+          lastVisitText,
           score
         };
       });
@@ -3981,8 +4126,9 @@ function VIPView() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.05 }}
+              onClick={() => setSelectedClientForContact(client)}
               className={cn(
-                "card p-6 relative overflow-hidden group transition-all hover:translate-y-[-4px]",
+                "card p-6 relative overflow-hidden group transition-all hover:translate-y-[-4px] cursor-pointer",
                 client.stars === 5 ? "border-yellow-500/30 bg-yellow-500/5" : 
                 client.stars === 4 ? "border-blue-500/30 bg-blue-500/5" :
                 "border-white/5"
@@ -4015,6 +4161,9 @@ function VIPView() {
                       />
                     ))}
                   </div>
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-2 flex items-center gap-1">
+                    <Clock className="w-3 h-3" /> Última visita: <span className="text-white">{client.lastVisitText}</span>
+                  </p>
                 </div>
               </div>
 
@@ -4040,6 +4189,69 @@ function VIPView() {
           ))}
         </div>
       )}
+
+      <AnimatePresence>
+        {selectedClientForContact && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="card w-full max-w-md p-8 relative overflow-hidden"
+            >
+              <button 
+                onClick={() => setSelectedClientForContact(null)}
+                className="absolute top-4 right-4 p-2 hover:bg-white/5 rounded-full text-zinc-500 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="text-center space-y-6">
+                <div className={cn(
+                  "w-24 h-24 rounded-3xl mx-auto flex items-center justify-center text-4xl font-black",
+                  selectedClientForContact.stars === 5 ? "bg-yellow-500 text-black" : 
+                  selectedClientForContact.stars === 4 ? "bg-blue-500 text-white" :
+                  "bg-zinc-800 text-zinc-400"
+                )}>
+                  {selectedClientForContact.name.charAt(0)}
+                </div>
+                
+                <div>
+                  <h3 className="text-2xl font-black text-white">{selectedClientForContact.name}</h3>
+                  <p className="text-zinc-500 font-medium">{selectedClientForContact.phone || 'Sin teléfono'}</p>
+                  <div className="mt-2 flex items-center justify-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                    <Clock className="w-3 h-3" /> Última visita: <span className="text-white">{selectedClientForContact.lastVisitText}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {selectedClientForContact.phone ? (
+                    <>
+                      <a
+                        href={`tel:${selectedClientForContact.phone}`}
+                        className="flex items-center justify-center gap-3 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-blue-900/20"
+                      >
+                        <Phone className="w-5 h-5" /> Llamar Ahora
+                      </a>
+                      
+                      <a
+                        href={`https://wa.me/${selectedClientForContact.phone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-3 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20"
+                      >
+                        <MessageCircle className="w-5 h-5" /> Enviar WhatsApp
+                      </a>
+                    </>
+                  ) : (
+                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest py-4">No hay información de contacto</p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -4120,11 +4332,8 @@ function ReportsView() {
 
   const filteredSales = useMemo(() => {
     let result = sales.filter(s => {
-      const date = new Date(s.created_at);
-      const start = startOfDay(new Date(dateRange.start));
-      const end = endOfDay(new Date(dateRange.end));
-      
-      const dateMatch = date >= start && date <= end;
+      const saleDate = format(new Date(s.created_at), 'yyyy-MM-dd');
+      const dateMatch = saleDate >= dateRange.start && saleDate <= dateRange.end;
       const clientMatch = selectedClient === 'all' || s.client_id === selectedClient;
       const serviceMatch = selectedService === 'all' || s.services === selectedService;
       const barberMatch = selectedBarber === 'all' || s.barber_id === selectedBarber;
@@ -4198,26 +4407,53 @@ function ReportsView() {
     doc.setFontSize(9);
     doc.setTextColor(100, 116, 139);
     doc.text(`Periodo: ${format(new Date(dateRange.start), 'dd/MM/yyyy')} al ${format(new Date(dateRange.end), 'dd/MM/yyyy')}`, 45, 34);
-    doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy hh:mm a')}`, 45, 39);
-
-    // Filter data based on date range
-    const start = startOfDay(new Date(dateRange.start));
-    const end = endOfDay(new Date(dateRange.end));
     
+    let filterY = 39;
+    if (selectedClient !== 'all') {
+      const clientName = clients.find(c => c.id === selectedClient)?.name || 'Desconocido';
+      doc.text(`Filtrado por Cliente: ${clientName}`, 45, filterY);
+      filterY += 5;
+    }
+    if (selectedBarber !== 'all') {
+      const barberName = barbers.find(b => b.id === selectedBarber)?.name || 'Desconocido';
+      doc.text(`Filtrado por Barbero: ${barberName}`, 45, filterY);
+      filterY += 5;
+    }
+    if (selectedService !== 'all') {
+      doc.text(`Filtrado por Servicio: ${selectedService}`, 45, filterY);
+      filterY += 5;
+    }
+    
+    doc.text(`Generado el: ${format(new Date(), 'dd/MM/yyyy hh:mm a')}`, 45, filterY);
+
+    // Filter data based on date range and other filters
     const periodSales = sales.filter(s => {
-      const d = new Date(s.created_at);
-      return d >= start && d <= end;
+      const saleDate = format(new Date(s.created_at), 'yyyy-MM-dd');
+      const dateMatch = saleDate >= dateRange.start && saleDate <= dateRange.end;
+      const clientMatch = selectedClient === 'all' || s.client_id === selectedClient;
+      const serviceMatch = selectedService === 'all' || s.services === selectedService;
+      const barberMatch = selectedBarber === 'all' || s.barber_id === selectedBarber;
+      return dateMatch && clientMatch && serviceMatch && barberMatch;
     });
     
     const periodExpenses = expenses.filter(e => {
-      const d = new Date(e.created_at);
-      return d >= start && d <= end;
+      const expenseDate = format(new Date(e.created_at), 'yyyy-MM-dd');
+      return expenseDate >= dateRange.start && expenseDate <= dateRange.end;
+    });
+
+    const periodPendingCredits = pendingCredits.filter(c => {
+      const creditDate = format(new Date(c.created_at), 'yyyy-MM-dd');
+      const dateMatch = creditDate >= dateRange.start && creditDate <= dateRange.end;
+      const clientMatch = selectedClient === 'all' || c.client_id === selectedClient;
+      const serviceMatch = selectedService === 'all' || c.services === selectedService;
+      const barberMatch = selectedBarber === 'all' || c.barber_id === selectedBarber;
+      return dateMatch && clientMatch && serviceMatch && barberMatch;
     });
 
     const totalIncome = periodSales.reduce((acc, s) => acc + s.total_amount, 0);
     const totalExpenses = periodExpenses.reduce((acc, e) => acc + e.amount, 0);
     const netProfit = totalIncome - totalExpenses;
-    const totalReceivables = pendingCredits.reduce((acc, c) => acc + (c.total_amount - (c.paid_amount || 0)), 0);
+    const totalReceivables = periodPendingCredits.reduce((acc, c) => acc + (c.total_amount - (c.paid_amount || 0)), 0);
 
     // 2. EXECUTIVE SUMMARY
     if (reportConfig.showSummary) {
@@ -4233,7 +4469,7 @@ function ReportsView() {
           ['INGRESOS TOTALES', fmt(totalIncome), 'Ingresos brutos del periodo'],
           ['GASTOS OPERATIVOS', fmt(totalExpenses), 'Egresos registrados'],
           [{ content: 'UTILIDAD NETA', styles: { fontStyle: 'bold' } }, { content: fmt(netProfit), styles: { fontStyle: 'bold', textColor: netProfit >= 0 ? [16, 185, 129] : [239, 68, 68] } }, 'Balance final'],
-          ['CUENTAS POR COBRAR', fmt(totalReceivables), 'Pendiente de cobro (Total histórico)'],
+          ['CUENTAS POR COBRAR', fmt(totalReceivables), 'Pendiente de cobro en el periodo'],
         ],
         theme: 'grid',
         headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255] },
@@ -4388,7 +4624,7 @@ function ReportsView() {
     }
 
     // 8. PENDING CREDITS (Accounts Receivable)
-    if (reportConfig.showPendingCredits && pendingCredits.length > 0) {
+    if (reportConfig.showPendingCredits && periodPendingCredits.length > 0) {
       if ((doc as any).lastAutoTable.finalY > pageHeight - 60) {
         doc.addPage();
         doc.text('8. CUENTAS POR COBRAR (CRÉDITOS ACTIVOS)', 14, 20);
@@ -4399,7 +4635,7 @@ function ReportsView() {
       autoTable(doc, {
         startY: (doc as any).lastAutoTable.finalY + ( (doc as any).lastAutoTable.finalY > pageHeight - 60 ? 5 : 20),
         head: [['Cliente', 'Fecha', 'Vencimiento', 'Total', 'Pagado', 'Pendiente']],
-        body: pendingCredits.map(c => [
+        body: periodPendingCredits.map(c => [
           c.clients?.name || 'Cliente',
           format(new Date(c.created_at), 'dd/MM/yy'),
           format(new Date(c.due_date), 'dd/MM/yy'),
@@ -4485,9 +4721,22 @@ function ReportsView() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-2xl font-black text-white tracking-tight">Reportes PDF</h3>
-          <p className="text-zinc-500 text-sm font-medium">Genera reportes detallados de tu negocio</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h3 className="text-2xl font-black text-white tracking-tight">Reportes PDF</h3>
+            <p className="text-zinc-500 text-sm font-medium">Genera reportes detallados de tu negocio</p>
+          </div>
+          <button 
+            onClick={fetchData}
+            disabled={loading}
+            className={cn(
+              "p-2 rounded-xl bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white transition-all",
+              loading && "animate-spin"
+            )}
+            title="Actualizar datos"
+          >
+            <TrendingUp className="w-5 h-5" />
+          </button>
         </div>
         <div className="flex p-1 bg-zinc-900/50 rounded-xl border border-white/5">
           <button
@@ -4510,39 +4759,6 @@ function ReportsView() {
           </button>
         </div>
       </div>
-
-      {activeReportTab === 'finance' && (
-        <div className="card p-6">
-          <h4 className="text-sm font-bold text-zinc-400 uppercase mb-4 flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Configuración del Reporte
-          </h4>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {Object.entries({
-              showSummary: 'Resumen Ejecutivo',
-              showByMethod: 'Por Método Pago',
-              showByService: 'Por Servicio',
-              showByCategory: 'Por Categoría Gasto',
-              showCommissions: 'Comisiones',
-              showSalesDetail: 'Detalle Ventas',
-              showExpensesDetail: 'Detalle Gastos',
-              showPendingCredits: 'Cuentas por Cobrar'
-            }).map(([key, label]) => (
-              <label key={key} className="flex items-center gap-2 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={(reportConfig as any)[key]}
-                  onChange={(e) => setReportConfig({ ...reportConfig, [key]: e.target.checked })}
-                  className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-xs font-medium text-zinc-400 group-hover:text-white transition-colors">
-                  {label}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
 
       {activeReportTab === 'finance' && (
         <div className="card p-6">
