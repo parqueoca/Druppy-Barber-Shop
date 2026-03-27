@@ -3256,46 +3256,50 @@ function ServicesView() {
                   "p-6 bg-zinc-900/40 rounded-2xl border border-white/5 border-l-4 hover:bg-zinc-900/60 hover:border-white/10 transition-all group relative", 
                   service.color
                 )}>
-                  <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                  <div className="flex justify-between items-start mb-4">
+                    <h4 className="font-black text-white tracking-tight">{service.name}</h4>
+                    <span className="text-blue-400 font-black tracking-tight">RD$ {service.price.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium mb-6">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{service.duration}</span>
+                  </div>
+                  
+                  <div className="flex gap-2 pt-4 border-t border-white/5">
                     {deleteConfirmId === service.id ? (
-                      <div className="flex gap-1">
+                      <div className="flex items-center gap-3 w-full">
+                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest mr-auto">¿Borrar?</span>
                         <button 
                           onClick={() => handleDeleteService(service.id)}
-                          className="px-2 py-1 text-[10px] font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all shadow-lg shadow-red-600/20"
+                          className="px-4 py-2 text-xs font-bold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all shadow-lg shadow-red-600/20"
                         >
                           Si
                         </button>
                         <button 
                           onClick={() => setDeleteConfirmId(null)}
-                          className="px-2 py-1 text-[10px] font-bold text-zinc-400 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-all border border-white/5"
+                          className="px-4 py-2 text-xs font-bold text-zinc-400 bg-zinc-800 rounded-xl hover:bg-zinc-700 transition-all border border-white/5"
                         >
                           No
                         </button>
                       </div>
                     ) : (
-                      <>
+                      <div className="flex gap-2 w-full">
                         <button 
                           onClick={() => handleEditService(service)}
-                          className="p-2 text-zinc-400 hover:text-blue-500 rounded-lg transition-colors"
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600/10 hover:bg-blue-600/20 text-blue-500 rounded-xl font-bold text-xs transition-all border border-blue-500/10"
                         >
-                          <Edit3 className="w-4 h-4" />
+                          <Edit3 className="w-3.5 h-3.5" />
+                          Editar
                         </button>
                         <button 
                           onClick={() => setDeleteConfirmId(service.id)}
-                          className="p-2 text-zinc-400 hover:text-red-500 rounded-lg transition-colors"
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-600/10 hover:bg-red-600/20 text-red-500 rounded-xl font-bold text-xs transition-all border border-red-500/10"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Borrar
                         </button>
-                      </>
+                      </div>
                     )}
-                  </div>
-                  <div className="flex justify-between items-start mb-4 pr-8">
-                    <h4 className="font-black text-white tracking-tight">{service.name}</h4>
-                    <span className="text-blue-400 font-black tracking-tight">RD$ {service.price.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>{service.duration}</span>
                   </div>
                 </div>
               )) : (
